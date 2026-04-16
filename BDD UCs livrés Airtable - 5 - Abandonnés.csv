@@ -1,0 +1,5 @@
+Use cases,Themes,Type de livrable,Type d'utilisation,Outil pressentis,Statut,Equipe projet,Description/objectifs? ,Utilisateur de la solution? ,Lien du benchmark solutions existantes,Lien parcours 
+Injection du drive dans un LLM pour pouvoir requeter toutes sortes de choses,RAG,Build,Interne Digi,,Abandonné,,,,,
+Génération de présentation powerpoint,REX,Build,Productivité missions,,Abandonné,,,,,
+"Pour les régies, automatiser la duplication d'événements entre les deux calendriers client et Digi",Product/project management tools,Build,Interne Digi,,Abandonné,,,,,
+"A partir d'un brief SEA BPCE, créer un plan de campagne au format excel détaillant les campagnes, groupes d'annonces, ventilation budgétaire etc. ",Paid Ads,Build,Productivité missions,"Email reçu via Monday, Make, OpenAI",Abandonné,"Yanis Sif, Marie Jard, Emmanuel Utard",,,,

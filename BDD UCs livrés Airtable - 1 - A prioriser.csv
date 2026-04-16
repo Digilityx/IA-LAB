@@ -1,0 +1,33 @@
+Use cases,Themes,Type de livrable,Type d'utilisation,Outil pressentis,Statut,Equipe projet,Description/objectifs? ,Utilisateur de la solution? ,Lien du benchmark solutions existantes,Lien parcours 
+Création de contenus : automatiser via Make le workflow d'Antoine pour production de contenus. ,"SEO, GEO & content tools",Build,Productivité missions,,Priorisation,,,,,
+Guide du check d'un compte publicitaire : quoi regarder et quelles actions correctives,Paid Ads,Bonnes pratiques,Productivité missions,,Priorisation,,,,,
+"Reporting unifié et travaillé pour les comptes Google Ads, GA4, Meta, LinkedIn Ads, Bing Ads",Paid Ads,Build,Productivité missions,,Priorisation,,,,,
+Lors d'une recherche utilisateur : Automatiser la création de compte rendu d'interview dans le slack de nos clients,Design UX/UI,Build,Productivité missions,,Priorisation,,,,,
+"Pouvoir générer en automatique, un audit flash SEO à partir d'un nom de domaine","SEO, GEO & content tools",Build,Vente,,Priorisation,,,,,
+Mettre en place un outil permettant d'auditer un compte Meta Ads rapidement,Audit,Build,Productivité missions,,Priorisation,,,,,
+Emailing automatique en cas de problèmes de performances sur des campagnes,Paid Ads,Build,Productivité missions,,Priorisation,,,,,
+"Donner les fondations de l'UI kit à une IA (couleurs, typos, banque d'icône, border-radius..) et l'IA crée les composants élémentaires",Design UX/UI,Build,Productivité missions,,Priorisation,,,,,
+"Création moodbaord / benchmark : Donner les ambiances qu'on souhaite à une IA, et ce dernier fait la recherche pour nous et la création du bench",Benchmark tools,Build,Productivité missions,,Priorisation,,,,,
+Mettre en place un outil permettant de : créer un plan de tracking et suivre les développements.,Analytics tools,Build,Productivité missions,,Priorisation,,,,,
+"Outil SEO de comparaison entre prod et préprod (outil Antoine), déjà en local, le mettre sur un serveur. 
+","SEO, GEO & content tools",Build,Productivité missions,Dev,Priorisation,"Antoine Guenancia, Yanis Sif",,,,
+"""Un canal slack “Better Call ?” pour trouver automatiquement le Digi disponible qui dispose de la compétence de mon choix
+(connexion Make ST Bubble, sheet compétences, profils LinkedIn et Chat GPT)""",Tool for RH,Build,Interne Digi,,Priorisation,,,,,
+Scrapping de toutes les relations de premier niveau LinkedIn d'un groupe de personnes,Sales tools,Build,Productivité missions,,Priorisation,,,,,
+"IA coffacilitatrice pendant les ateliers (Time keeper, tips pendant la journée idéation, synthèse des échanges, note reader)",Product/project management tools,Build,Productivité missions,,Priorisation,,,,,
+Générer automatiquement les images des propales plutot que perdre du temps à chercher l'image libre de droit qui correspond,"SEO, GEO & content tools",Build,Interne Digi,,Priorisation,,,,,
+"Gestion des leads Digi au sein de ST (ajout de leads, scoring proba gain, suivi pipe)",Sales tools,Build,Vente,,Priorisation,,,,,
+Extraction et envoi automatisé de chiffres/données a partir d'un mail dans une table (en vue de tenir a jour un rapport journalier/hebdo/mensuel),Analytics tools,Build,Productivité missions,Airtable + GGsheet,Priorisation,,,,,
+"REX projet produit : 
+Use case 1 : reprendre tous les tickets et faire le comparo : Points prévus, points réalisés, vélocité. 
+Use Case 2 : analyser sur l'ensemble d'une capacité en point d'une équipe sur une période donnée
+",REX,Build,Vente,"Make, Open AI",Priorisation,,,,,
+Outil d'aide à la définition du budget marque en SEA (prenant en compte les positions SEO),Paid Ads,Build,Productivité missions,,Priorisation,,,,,
+Génération de REX : permettre à chacun de créer ses REX et de générer des slides facilement (automatisation et animation de l'alimentation),REX,Build,Vente,Lovable + Cursor,Priorisation,"Clément Guichard, Enzo Lopez",,,,
+Automatisation intégrée à Stafftool qui recalcule les TJM à partir de ce qui a été vendu et finalement produit,Tool for RH,Build,Interne Digi,,Priorisation,,,,,
+"Automatiser la remontée des budgets quotidiens dans Google Ads afin de pouvoir sortir le KPI Budget - dépense et faire en sorte qu'il soit le plus proche de 0 possible. Récupérer également le target ROAS. Afin de sortir des recommandations sur l''évolution du target ROAS pour dépenser tout le budget de manière optimale. 
+Granularité : au global et par campagne
++ pouvoir remonter l'évolution des valeurs de conversion par action de conversion. Pour voir la place des conversions en volume et en valeur. 
++ remonter les actions de conversion par campagne afin de déterminer des modifications en termes de title/description ou encore de stratégie de conversion.
+",Paid Ads,Build,,Gsheet + Make + LLMs + Looker,Priorisation,,,,,
+Automatisation pour résumer automatiquement les articles sur slack qui ne comportent pas de résumé,"SEO, GEO & content tools",Build,Interne Digi,Slack + LLM,Priorisation,Kévin Ly Hak,,,,

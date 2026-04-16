@@ -1,0 +1,106 @@
+Use cases,Themes,Type de livrable,Type d'utilisation,Outil pressentis,Statut,Equipe projet,Description/objectifs? ,Utilisateur de la solution? ,Lien du benchmark solutions existantes,Lien parcours 
+"Enrichissement de base I - A partir d'une liste d'entreprises, et potentiellement autres datapoints, identifier et enrichir la base avec les noms de domaine",BDD : Enrichissement & scoring de base,Build,Productivité missions,,Livré,"Enzo Lopez, Yanis Sif, Julie Lecomte",,,,
+"Enrichissement de base I - A partir d'une liste de noms de domaine, identifier et enrichir la base avec les noms d'entreprise, avec des informations de CA, secteur etc
+",BDD : Enrichissement & scoring de base,Build,Productivité missions,,Livré,"Enzo Lopez, Yanis Sif, Marine Chouard",,,,
+"Enrichissement de base I - A partir de noms de domaine, identifier et enrichir la base avec les entreprise et les profils LinkedIn company 
+",BDD : Enrichissement & scoring de base,Build,Productivité missions,,Livré,"Enzo Lopez, Yanis Sif, Julie Lecomte",,,,
+"Enrichissement de base I - A partir d'une liste d'entreprises et basé sur basé sur des job titles spécifique, identifier et enrichir la base avec les décideurs, ",BDD : Enrichissement & scoring de base,Build,Productivité missions,,Livré,"Enzo Lopez, Yanis Sif, Julie Lecomte",,,,
+"Enrichissement de base I  A partir d'une liste de  contacts, identifier et enrichir la base avec profils linkedin complet, email, numéro de téléphone",BDD : Enrichissement & scoring de base,Build,Productivité missions,,Livré,"Enzo Lopez, Yanis Sif, Julie Lecomte",,,,
+"Enrichissement de base I A partir de post Linkedin postés sur un sujet particulier, identifier et enrichir une base avec les profils Linkedin",BDD : Enrichissement & scoring de base,Build,Productivité missions,,Livré,"Enzo Lopez, Yanis Sif, Julie Lecomte",,,,
+"Enrichissement de base I A partir d'une liste de   nom / prénom et infos supplémentaires, identifier et enrichir une base avec les profils LinkedIn, Facebook, Twitter",BDD : Enrichissement & scoring de base,Build,Productivité missions,,Livré,"Enzo Lopez, Yanis Sif, Julie Lecomte",,,,
+"Scoring de base I A partir d'une liste de contacts, s'appuyer sur l'IA pour scorer et catégoriser les cibles",BDD : Enrichissement & scoring de base,Build,Productivité missions,,Livré,"Enzo Lopez, Yanis Sif, Julie Lecomte",,,,
+"Outils de veille I A partir d'une liste d'acteurs précis, d'un sujet et/ou de quelques mots clés, créer un outil de veille des actualités business",Benchmark tools,Build,Productivité missions,"Slack, Make, OpenAI, Googlesearch, google slide",Livré,"Enzo Lopez, Marie Jard","Objectifs :
+Craquer un sujet en détail ou en surface ne quelques secondes","Les consultants Digilityx, en mission ou en avant vente",https://docs.google.com/document/d/1IznB1FiM-UCwqL-jMNZNwQWGvDRzNNtSlW2hwH42Wkw/edit?usp=sharing,https://whimsical.com/automation-outreach-8pBgBgDoa83z8eh6xpmV1f
+Outil de veille I A partir de la liste de contacts de 1er niveau de Digilityx : toutes les activités sont consignées dans un airtable puis analyse LLM pour qualifier l'activité. Si des activités sont intéressantes pour le business : notification du contact Digi sur Slack,Benchmark tools,Build,Vente,Airtable / Make / LLM,Livré,"Yanis Sif, Julie Lecomte, François Coulon",Identifier les décideurs intentionnistes et notifier la personne chez Digi,"DigiPeople 
+1e batch : Alexandre Auger, Alexandre Koch, Casilde, Cindy, Endza, Louise, Manu, Maxime, Schoof",https://miro.com/app/board/uXjVI-7MgqE=/,https://miro.com/app/board/uXjVI-7MgqE=/
+Audit I Mettre en place un outil permettant d'auditer un compte Google Ads rapidement,Audit,Build,Productivité missions,Airtable,Livré,"Yanis Sif, Baptiste Malherbe",,,,
+"Note de frais I A partir des factures, scan tickets de caisse, automatiser la création des notes de frais (calcul de la TVA, conversion $ > €,...)",Note de frais,Build,Interne Digi,,Livré,"Leslie Thongrith, Yanis Sif, Maxime Plasse, Clément Guichard","Gain de temps pour les consultants pour remplir leurs note de frais
+S'assurer que chaque note de frais est adossée à un justificatif",Consultants Digilityx,https://docs.google.com/presentation/d/1NL-UZ8SNyLziEtAqS_mJVaH5t3C2fdyvFml3hgU6Nk0/edit?usp=sharing,https://miro.com/app/board/uXjVIH6PwjY=/?share_link_id=982750598655
+"Outils de feedback, Backlog et Prio I Centraliser, notifier et prioriser les demandes métiers","Feeback tools, Product/project management tools",Build,Productivité missions,Fillout + Airtable,Livré,"Cyrielle Foures, Julien Bechkri, Marie Jard","#1 - Rassembler tous les besoins métiers dans un espace centralisé, pour faciliter la gestion et la consultation des demandes pour le PM
+#2 - Organiser et prioriser les besoins métiers en fonction de critères préétablis par le PM
+#3 - Envoyer des notifications automatisées aux métiers concernant l’état de leurs demandes","1. Les contributeurs (Utilisateurs qui soumettent des demandes)
+- Soumettre facilement leurs demandes dans un espace centralisé
+- Suivre l’avancement et la priorisation de leurs demandes
+- Recevoir des notifications sur le statut de leurs demandes
+
+2. Les gestionnaires (Product Managers et Product Owners)
+- Avoir une vue globale et centralisée de toutes les demandes métiers
+- Analyser, organiser et prioriser les demandes selon des critères définis (impact, faisabilité, urgences, etc.).
+
+3. Les exécutants (Équipes techniques et opérationnelles)
+- Estimer les demandes validées et priorisées
+- Avoir une vision claire des tâches à exécuter
+- Comprendre le contexte et l’impact des demandes",https://www.figma.com/board/rXoWB0RZgza3V3aaaix7Yt/Besoins-M%C3%A9tiers-%2F-Projet-Digi?node-id=28-933&t=fIJcjlFWnV5xYKeG-1,https://www.figma.com/board/rXoWB0RZgza3V3aaaix7Yt/Besoins-M%C3%A9tiers-%2F-Projet-Digi?node-id=28-933&t=fIJcjlFWnV5xYKeG-1
+"Outils de feedback, Backlog et Prio I Module de feedback Bubble.io / en code","Feeback tools, Product/project management tools",Build,Interne Digi,,Livré,"Maxime Plasse, Clément Guichard","- Permettre aux clients ou aux équipes internes de partager des retours sur les projets en cours ;
+- Centraliser les feedbacks (Airtable) de manière structurée pour améliorer le produit/service ;
+- Faciliter la communication entre les parties prenantes (client, équipe interne) ;
+- Identifier rapidement les points de friction ou d'amélioration dans le projet.","Clients d'une app Bubble : pour partager leurs retours sur la solution en cours de développement.
+Équipes internes (support, marketing, etc.) : pour proposer des améliorations ou signaler des incohérences.
+
+Product Builder / Développeur d'un outil Bubble: pour centraliser et gérer les feedbacks internes et clients.",https://docs.google.com/spreadsheets/d/1ENOF96tCDLDtY8juE6dfz4oshl-u9TitUTXWXMSzGtE/edit?gid=0#gid=0,https://www.figma.com/board/HNoszKnmK5ps7m75DSAWE0/Macro-Flow-Feecback-Collector?node-id=0-1&p=f&t=ZusOLj8PvxgwzgSb-0
+Mesure de la performance I Automatisation des analyse Performance Camp : ,Analytics tools,Build,Productivité missions,,Livré,"Marie Jard, Yanis Sif, Julie Lecomte, Clément Maria","Automatiser des analyses de performances de mes campagnes google Ads
+- Source : extract des régie en GSHEET
+- Prompt : analyse et reco, identification de patern, besoin spécifique du client
+- Intégration des résultats dans un PPT",Consultants Digi qui s'occupent de campagnes google ads,https://docs.google.com/document/d/1NIHT1NesIisX7pXj8nTHaOgWCzIe5RB1piLYmzUadjs/edit?tab=t.0,https://docs.google.com/document/d/1NIHT1NesIisX7pXj8nTHaOgWCzIe5RB1piLYmzUadjs/edit?tab=t.0
+Audit I Automatisation des audit flash SEO,Audit,Build,Vente,,Livré,"Cyrielle Foures, Alexandre Auger","Automatiser la production des audits SEO utilisés lors de propales.
+
+Ces audits permettent d'engager la discussion autour du SEO et faire un état des lieux rapides avec le prospect des forces et faiblesses de son SEO. L'objectif est de le projeter aussi sur l'impact potentiel des optimisations, avec des REX.
+
+Les prospects apprécient ce support, ils ont la sensation d'un service personnalisé, qu'on a vraiment fait notre boulot de recherche. On est souvent remerciés pour le support, et c'est parfois ce qui permet de décrocher des propales. Donc le support est important.
+
+On utilise plusieurs outils pour récupérer de la data : SEMRush (sémantique et backlinks), Screaming Frog (balisage, technique) sont les outils principaux, mais on utilise aussi Google Page Speed et Majestic SEO pour aller un peu plus loin dans l'analyse.
+
+Si on arrive déjà à automatiser la collecte et la mise en forme des données SEMRush + Screaming Frog, c'est un très bon début. Mais si on arrive à tout collecter, c'est le must.
+Est-ce que l'automatisation peut aussi interpréter les résultats et en tirer des conclusions ?
+
+Restera plus qu'à ajouter quelques screenshots et les quelques données manquantes, et on aura des audits complets.
+
++ Pourquoi pas créer des audits automatisés sur des cibles qu'on souhaite prospecter, à utiliser en hook ?","Equipe SEO (Max, Nayana, Alex)",https://www.digilityx.com/,https://docs.google.com/presentation/d/18sA1G_qU8ySUe-fys5kQFDQ0G6jngC58/edit?usp=sharing&ouid=105934775443438041580&rtpof=true&sd=true
+Base de connaissance I création d'une base onglet sur Stafftool,Tool for RH,Build,Vente,Bubble / Airtable / softr,Livré,"Leslie Thongrith, Cyrielle Foures",,,,
+Google Ads I Outil d'alerting slack lorsque les performances sont à checker,Paid Ads,Build,Productivité missions,Slack / Google Ads Script,Livré,"Chloé Briend, Yanis Sif","- Être informé(e) régulièrement des performances clés de campagnes d'acquisition sur Slack sans avoir à vérifier dans les régies
+- Être alerté(e) rapidement sur Slack en cas de variations importantes de KPI clés de campagnes","- Consultant(e)s  MKG Digi
+- Consultant(s) MKG Digi en multi forfait
+- Consultant(s) MKG Digi en régie
+
+
+",https://docs.google.com/presentation/d/1BJ7ENwWWjzpbZkbZtptz0YA6NAtfddaygt1vvjr_64o/edit#slide=id.g336f64a797e_0_80,https://docs.google.com/presentation/d/1BJ7ENwWWjzpbZkbZtptz0YA6NAtfddaygt1vvjr_64o/edit#slide=id.g336f64a797e_0_80
+Automatisation de l'export des dépenses media par régie et par campagne,Paid Ads,Build,Productivité missions,Make,Livré,Marie Jard,,,,
+Adaptation du Airtable Audit pour l'écoconception,Audit,Build,Productivité missions,Airtable,Livré,"Alexandre Koch, Catalina Pastas",,,,
+"Outil SEO : a partir d'un Gsheet listant les mots clés pour un domaine, scoring de ces mots clés d'un point de vue business par LLM
+","SEO, GEO & content tools",Build,Productivité missions,Make + Airtable + OpenAI,Livré,"Yanis Sif, Alexandre Auger",,,,
+Recrutement : automatiser l'analyse des CVs des personnes postulant aux offres d'emploi Digi. ,Tool for RH,Build,Interne Digi,Airtable + Make + LLM,Livré,"Alexandre Koch, Leslie Thongrith","automatiser l'analyse des CVs des personnes postulant aux offres d'emploi Digi. 
++ Dimension de refus automatique pour les personnes mal scorées. 
+Revoir le process sur le site webflow > tally > Slack
+
+Impact : 
+- Gain de temps lors des recrutements 
+- Amélioration de la qualité des profils rencontrées en screening","Associés, managers Digilityx",https://www.com,https://www.com
+Outil de génération d'articles à partir d'un mot clé donné,"SEO, GEO & content tools",Build,Productivité missions,"Crew AI + Colab
+",Livré,Yanis Sif,,,,
+Outil de monitoring LLM : requete sur les principaux prompts tapés sur une marque puis requete LLM pour analyser.,"SEO, GEO & content tools",Build,Productivité missions,,Livré,Yanis Sif,,,,
+Création d'un outil de pilotage des initiatives déployées en mission / outil de roadmap projet,Product/project management tools,Build,Productivité missions,Vibecoding,Livré,"Leslie Thongrith, Enzo Lopez","- Permettre aux Digi de visualiser toutes les initiatives sur une mission 
+- Offrir une visualisation interactive pour les clients de toutes les initiatives dans la backlog et leur permettre de faire un choix éclairé en fonction de l'impact et de l'effort. ","- Digi people
+- Clients Digi",https://www.com,https://www.com
+Outil de veille pour les campagnes SEA & SMA,Paid Ads,Build,Productivité missions,API Google Ads & Meta + Make & LLM,Livré,"Emmanuel Utard, Yanis Sif, Marie Jard","Pour chaque avant vente ou lancement de campagne chez un client on fait un rapide benchmark de ce que fait la concurrence. A date on utilise la librairie Meta ou Google transparency (perso je regarde rarement LKD ou Tiktok alors qu'ils ont des solutions similaires).
+Les objectifs sont :
+Voir sur quelles régies sont présents les concurrents
+Quels type de formats ils utilisent (ca nous donne des indications sur le type de campagnes qu'ils utilisent)
+Avoir une idée de la tonalité des créas et des concepts créatifs. Cela nous permet d'identifier leur degré de maturité et potentiellement de nous adapter
+Les créas des concurrents peuvent également être une source d'inspiration
+On peut récupérer des volumes de diffusion (ex, sur Google transparency : tel format à généré 70k - 80k impressions)
+Sur Meta on peut récupérer le nom du mandataire payeur. Cela permet souvent d'identifier l'agence gestionnaire
+15 h 39
+J'ai vu cette vidéo d'un mec qui propose un script n8n en opensource d'un workflow qui permet d'automatiser ce type de veille.
+Je sais que Max et Enzo utilisent beaucoup n8n. Ca peut valoir le coup de voir si le script peut facilement être adapté, si ca correspond à nos besoins et comment on pourrait le faire évoluer
+https://gamma.app/docs/Detecter-les-ads-dune-entreprise-ehvqqzcih0sc90m?mode=doc",,,
+Se brancher avec le MCP Server de GA pour poser des questions,Analytics tools,Build,Productivité missions,"GA, Claude",Livré,"Marie Jard, Yanis Sif",,,,
+Usine à création de contenu IA basé sur Airtable,"SEO, GEO & content tools",Build,Vente,"Make, Airtable, OpenAI",Livré,"Yanis Sif, Maxime Jouffrault",,,,
+Outils d'optimisation SEO des pages de contenus,"SEO, GEO & content tools",Build,Vente,"Scraper, Make, OpenAI",Livré,"Yanis Sif, Alexandre Auger","Outils d'optimisation SEO des pages de contenus E-commerce (manger Juste) 
+Etre proprio : génération de 900 pages, pages par ville avec texte spécifique (FAQ, descriptif des écoles...) ",,,
+Outil de génération de suggestion de maillage interne pour le SEO,"SEO, GEO & content tools",Build,Productivité missions,Make / Airtable / OpenAI,Livré,Yanis Sif,,,,
+Outil de création de message automatique pour Cold Emailing,Sales tools,Build,Productivité missions,Make / Airtable / OpenAI,Livré,Yanis Sif,,,,
+Newsletter de veille automatique,Benchmark tools,Build,Vente,"Make, Gemini et gsheet
+",Livré,Alexandre Koch,,,,
+Outils d'audit automatique GEO - scraping des pages sélectionnées et analyse,"SEO, GEO & content tools",Build,Productivité missions,,Livré,Yanis Sif,Outils d'audit automatique GEO - scraping des pages sélectionnées et analyse autour de 19 critères,,,
+Personal planner - Booker des créneaux libre dans son agenda pour des sujets dédiés,Product/project management tools,Build,Interne Digi,Cursor/Vercel/Supabase,Livré,Enzo Lopez,Booker des créneaux libre dans son agenda pour des sujets dédiés,,,
+"App gamifiée de veille & curations : tech, IA, Product, Automatisation.",Benchmark tools,Build,Interne Digi,"Cursor, Gemini",Livré,Maxime Plasse,,,,

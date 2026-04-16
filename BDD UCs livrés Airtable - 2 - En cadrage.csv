@@ -1,0 +1,7 @@
+Use cases,Themes,Type de livrable,Type d'utilisation,Outil pressentis,Statut,Equipe projet,Description/objectifs? ,Utilisateur de la solution? ,Lien du benchmark solutions existantes,Lien parcours 
+Productisation - plannings automatiques,Product/project management tools,Build,Vente,Bubble,Cadrage,Bubble,Cadrage,"Clément Guichard, Maxime Plasse",,
+Interface de gestion des EAD (onglet objectifs) - Version en cours,Tool for RH,Build,Interne Digi,Cursor / Supabase,Cadrage,Cursor / Supabase,Cadrage,"Alexandre Koch, Enzo Lopez, Clément Guichard",,
+Walkthrough / setup vibecoding + cookbook,Vibe Coding,Build,Vente,Filesearch Gemini ou Open AI,Cadrage,Filesearch Gemini ou Open AI,Cadrage,"Enzo Lopez, Maxime Plasse",,
+"RAG sur les meeting notes (perso pour chaque Digi) + slackbot
+",RAG,Build,Interne Digi,,Cadrage,,Cadrage,Enzo Lopez,,
+Automatisation Stack Prospection digi,Sales tools,Build,Vente,,Cadrage,,Cadrage,"Cyrielle Foures, Julie Lecomte, Yanis Sif, Enzo Lopez",,
