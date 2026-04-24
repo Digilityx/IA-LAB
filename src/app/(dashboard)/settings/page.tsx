@@ -57,11 +57,12 @@ import {
 import type { Tag as TagType } from "@/types/database"
 import {
   getProfile,
-  searchProfiles,
+  listAllProfiles,
   getEffectiveTjm,
 } from "@/lib/stafftool/profiles"
 import type { StafftoolProfile } from "@/lib/stafftool/types"
 import { isIaLabAdmin } from "@/lib/ia-lab-roles"
+import type { IaLabRole } from "@/lib/ia-lab-roles"
 
 const TAG_COLORS = [
   "#ef4444",
@@ -111,6 +112,7 @@ export default function SettingsPage() {
 
   // Users state
   const [allProfiles, setAllProfiles] = useState<StafftoolProfile[]>([])
+  const [iaLabRoles, setIaLabRoles] = useState<Map<string, IaLabRole>>(new Map())
 
   // Display preferences
   const [displayPrefs, setDisplayPrefs] = useDisplayPrefs()
@@ -122,10 +124,11 @@ export default function SettingsPage() {
     } = await supabase.auth.getUser()
     if (!user) return
 
-    const [profileData, tagsRes, allProfilesData] = await Promise.all([
+    const [profileData, tagsRes, allProfilesData, rolesRes] = await Promise.all([
       getProfile(user.id),
       supabase.from("ia_lab_tags").select("*").order("name"),
-      searchProfiles(""),
+      listAllProfiles(),
+      supabase.from("ia_lab_user_roles").select("user_id, role"),
     ])
 
     if (profileData) {
@@ -134,6 +137,12 @@ export default function SettingsPage() {
     }
     if (tagsRes.data) setTags(tagsRes.data)
     setAllProfiles(allProfilesData)
+    if (rolesRes.data) {
+      const roleMap = new Map<string, IaLabRole>(
+        rolesRes.data.map((r) => [r.user_id, r.role as IaLabRole])
+      )
+      setIaLabRoles(roleMap)
+    }
   }, [])
 
   useEffect(() => {
@@ -178,21 +187,20 @@ export default function SettingsPage() {
   }
 
   // ---- User handlers ----
-  const handleUpdateUserRole = async (userId: string, newRole: string) => {
+  const handleIaLabRoleChange = async (userId: string, newRole: 'admin' | 'member' | 'viewer') => {
     const supabase = createClient()
-    await supabase.from("profiles").update({ role: newRole }).eq("id", userId)
-    fetchData()
-  }
-
-  const handleUpdateUserDepartment = async (
-    userId: string,
-    newDept: string
-  ) => {
-    const supabase = createClient()
-    await supabase
-      .from("profiles")
-      .update({ team: newDept || null })
-      .eq("id", userId)
+    if (newRole === 'viewer') {
+      const { error } = await supabase
+        .from('ia_lab_user_roles')
+        .delete()
+        .eq('user_id', userId)
+      if (error) throw error
+    } else {
+      const { error } = await supabase
+        .from('ia_lab_user_roles')
+        .upsert({ user_id: userId, role: newRole })
+      if (error) throw error
+    }
     fetchData()
   }
 
@@ -522,12 +530,9 @@ export default function SettingsPage() {
                             {p.email}
                           </TableCell>
                           <TableCell>
-                            <DepartmentEditor
-                              value={p.team || ""}
-                              onSave={(val) =>
-                                handleUpdateUserDepartment(p.id, val)
-                              }
-                            />
+                            <span className="text-sm text-muted-foreground">
+                              {p.team || <span className="italic">—</span>}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <span className="text-sm text-muted-foreground">
@@ -536,9 +541,9 @@ export default function SettingsPage() {
                           </TableCell>
                           <TableCell>
                             <Select
-                              value={p.role}
+                              value={iaLabRoles.get(p.id) ?? 'viewer'}
                               onValueChange={(v) =>
-                                handleUpdateUserRole(p.id, v)
+                                handleIaLabRoleChange(p.id, v as 'admin' | 'member' | 'viewer')
                               }
                               disabled={p.id === profile?.id}
                             >
@@ -780,50 +785,3 @@ export default function SettingsPage() {
   )
 }
 
-// ---- Inline Department Editor ----
-function DepartmentEditor({
-  value,
-  onSave,
-}: {
-  value: string
-  onSave: (val: string) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [localValue, setLocalValue] = useState(value)
-
-  if (editing) {
-    return (
-      <div className="flex items-center gap-1">
-        <Input
-          value={localValue}
-          onChange={(e) => setLocalValue(e.target.value)}
-          className="h-7 text-xs w-28"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              onSave(localValue)
-              setEditing(false)
-            }
-            if (e.key === "Escape") {
-              setLocalValue(value)
-              setEditing(false)
-            }
-          }}
-          onBlur={() => {
-            onSave(localValue)
-            setEditing(false)
-          }}
-        />
-      </div>
-    )
-  }
-
-  return (
-    <button
-      onClick={() => setEditing(true)}
-      className="text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
-    >
-      {value || <span className="italic">—</span>}
-    </button>
-  )
-}
