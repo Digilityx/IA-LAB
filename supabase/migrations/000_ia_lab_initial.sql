@@ -451,3 +451,32 @@ CREATE POLICY "UC owner or admin updates interest request" ON ia_lab_interest_re
     )
     OR has_ia_lab_role(ARRAY['admin']::ia_lab_role[])
   );
+
+-- =========================================================================
+-- ia_lab_list_all_missions — SECURITY DEFINER RPC
+-- Lets IA Lab admins see all missions despite stafftool's missions RLS.
+-- Gate is inside the function body; non-admins get an empty set.
+-- Column whitelist matches verified stafftool schema (see spec § A3).
+-- =========================================================================
+
+CREATE OR REPLACE FUNCTION ia_lab_list_all_missions()
+RETURNS TABLE (
+  id          UUID,
+  label       TEXT,
+  type        TEXT,
+  client_id   UUID,
+  start_date  DATE,
+  end_date    DATE
+)
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT m.id, m.label, m.type, m.client_id, m.start_date, m.end_date
+  FROM missions m
+  WHERE has_ia_lab_role(ARRAY['admin']::ia_lab_role[]);
+$$;
+
+REVOKE ALL ON FUNCTION ia_lab_list_all_missions() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ia_lab_list_all_missions() TO authenticated;
