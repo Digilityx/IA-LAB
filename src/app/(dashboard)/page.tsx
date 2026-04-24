@@ -52,16 +52,16 @@ export default function DashboardPage() {
     const supabase = createClient()
     const [sprintRes, ucRes, interestsRes] = await Promise.all([
       supabase
-        .from("sprints")
+        .from("ia_lab_sprints")
         .select("*")
         .eq("status", "active")
         .order("start_date", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase.from("use_cases").select("id, status, is_published"),
+      supabase.from("ia_lab_use_cases").select("id, status, is_published"),
       supabase
-        .from("interest_requests")
-        .select("*, requester:profiles!interest_requests_requester_id_fkey(*), use_case:use_cases(title)")
+        .from("ia_lab_interest_requests")
+        .select("*, requester:profiles!ia_lab_interest_requests_requester_id_fkey(*), use_case:ia_lab_use_cases(title)")
         .eq("is_archived", false)
         .order("created_at", { ascending: false })
         .limit(10),
@@ -71,7 +71,7 @@ export default function DashboardPage() {
       setActiveSprint(sprintRes.data)
       // Fetch use cases for active sprint
       const { data: sprintUc } = await supabase
-        .from("use_cases")
+        .from("ia_lab_use_cases")
         .select("*, owner:profiles!use_cases_owner_id_fkey(*)")
         .eq("sprint_id", sprintRes.data.id)
         .order("created_at")
@@ -109,7 +109,7 @@ export default function DashboardPage() {
   const handleToggleRead = async (id: string, currentRead: boolean) => {
     const supabase = createClient()
     const { error } = await supabase
-      .from("interest_requests")
+      .from("ia_lab_interest_requests")
       .update({ is_read: !currentRead })
       .eq("id", id)
     if (error) toast.error("Erreur")
@@ -123,7 +123,7 @@ export default function DashboardPage() {
   const handleArchive = async (id: string) => {
     const supabase = createClient()
     const { error } = await supabase
-      .from("interest_requests")
+      .from("ia_lab_interest_requests")
       .update({ is_archived: true })
       .eq("id", id)
     if (error) toast.error("Erreur")
@@ -136,7 +136,7 @@ export default function DashboardPage() {
   const handleDelete = async (id: string) => {
     const supabase = createClient()
     const { error } = await supabase
-      .from("interest_requests")
+      .from("ia_lab_interest_requests")
       .delete()
       .eq("id", id)
     if (error) toast.error("Erreur lors de la suppression")

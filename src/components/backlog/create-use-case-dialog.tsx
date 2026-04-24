@@ -54,7 +54,7 @@ export function CreateUseCaseDialog({ onCreated }: CreateUseCaseDialogProps) {
     const fetchData = async () => {
       const supabase = createClient()
       const [sprintsRes, membersRes, userRes] = await Promise.all([
-        supabase.from("sprints").select("*").order("start_date", { ascending: false }),
+        supabase.from("ia_lab_sprints").select("*").order("start_date", { ascending: false }),
         supabase.from("profiles").select("*").order("full_name"),
         supabase.auth.getUser(),
       ])
@@ -104,7 +104,7 @@ export function CreateUseCaseDialog({ onCreated }: CreateUseCaseDialogProps) {
     if (tools) insertData.tools = tools
 
     const { data: insertedUc, error } = await supabase
-      .from("use_cases")
+      .from("ia_lab_use_cases")
       .insert(insertData)
       .select("id")
       .single()
@@ -112,7 +112,7 @@ export function CreateUseCaseDialog({ onCreated }: CreateUseCaseDialogProps) {
     if (!error && insertedUc) {
       // Also insert into sprint_use_cases junction table if sprint selected
       if (sprintId && sprintId !== "none") {
-        await supabase.from("sprint_use_cases").insert({
+        await supabase.from("ia_lab_sprint_use_cases").insert({
           sprint_id: sprintId,
           use_case_id: insertedUc.id,
         })

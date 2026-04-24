@@ -70,12 +70,12 @@ export function CommandPalette() {
 
     const [ucRes, sprintRes] = await Promise.all([
       supabase
-        .from("use_cases")
+        .from("ia_lab_use_cases")
         .select("id, title, category, status")
         .ilike("title", searchTerm)
         .limit(8),
       supabase
-        .from("sprints")
+        .from("ia_lab_sprints")
         .select("id, name, status")
         .ilike("name", searchTerm)
         .limit(5),

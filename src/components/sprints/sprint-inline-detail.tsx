@@ -100,14 +100,14 @@ export function SprintInlineDetail({
     const supabase = createClient()
     const [sucRes, profilesRes, sprintsRes] = await Promise.all([
       supabase
-        .from("sprint_use_cases")
+        .from("ia_lab_sprint_use_cases")
         .select(
-          "*, use_case:use_cases(*, owner:profiles!use_cases_owner_id_fkey(*)), assignments:sprint_use_case_assignments(*, profile:profiles(*))"
+          "*, use_case:ia_lab_use_cases(*, owner:profiles!use_cases_owner_id_fkey(*)), assignments:ia_lab_sprint_use_case_assignments(*, profile:profiles(*))"
         )
         .eq("sprint_id", sprintId)
         .order("created_at"),
       supabase.from("profiles").select("*").order("full_name"),
-      supabase.from("sprints").select("*").order("start_date"),
+      supabase.from("ia_lab_sprints").select("*").order("start_date"),
     ])
     if (sucRes.data) {
       const data = sucRes.data as SprintUseCase[]
@@ -134,7 +134,7 @@ export function SprintInlineDetail({
   const handleSprintStatusChange = async (newStatus: SprintStatus) => {
     const supabase = createClient()
     const { error } = await supabase
-      .from("sprints")
+      .from("ia_lab_sprints")
       .update({ status: newStatus })
       .eq("id", sprintId)
     if (error) toast.error("Erreur lors du changement de statut")
@@ -217,7 +217,7 @@ export function SprintInlineDetail({
         if (!currPersistedIds.has(orig.id)) {
           ops.push(
             supabase
-              .from("sprint_use_case_assignments")
+              .from("ia_lab_sprint_use_case_assignments")
               .delete()
               .eq("id", orig.id)
           )
@@ -228,7 +228,7 @@ export function SprintInlineDetail({
         if (!a.profile_id) continue
         if (a.id.startsWith("new-")) {
           ops.push(
-            supabase.from("sprint_use_case_assignments").insert({
+            supabase.from("ia_lab_sprint_use_case_assignments").insert({
               sprint_use_case_id: suc.id,
               profile_id: a.profile_id,
               estimated_days: a.estimated_days,
@@ -243,7 +243,7 @@ export function SprintInlineDetail({
           ) {
             ops.push(
               supabase
-                .from("sprint_use_case_assignments")
+                .from("ia_lab_sprint_use_case_assignments")
                 .update({
                   profile_id: a.profile_id,
                   estimated_days: a.estimated_days,
@@ -268,7 +268,7 @@ export function SprintInlineDetail({
   ) => {
     const supabase = createClient()
     const { error } = await supabase
-      .from("use_cases")
+      .from("ia_lab_use_cases")
       .update({ status: newStatus })
       .eq("id", useCaseId)
     if (error) toast.error("Erreur lors du changement de statut")
@@ -286,7 +286,7 @@ export function SprintInlineDetail({
     if (!suc?.use_case) return
     const supabase = createClient()
     const { error: e1 } = await supabase
-      .from("sprint_use_cases")
+      .from("ia_lab_sprint_use_cases")
       .update({ sprint_id: targetSprintId })
       .eq("id", sucId)
     if (e1) {
@@ -294,7 +294,7 @@ export function SprintInlineDetail({
       return
     }
     await supabase
-      .from("use_cases")
+      .from("ia_lab_use_cases")
       .update({ sprint_id: targetSprintId })
       .eq("id", suc.use_case.id)
     toast.success("Use case déplacé vers un autre sprint")
@@ -305,7 +305,7 @@ export function SprintInlineDetail({
   const handleRemoveUc = async (sucId: string) => {
     const supabase = createClient()
     const { error } = await supabase
-      .from("sprint_use_cases")
+      .from("ia_lab_sprint_use_cases")
       .delete()
       .eq("id", sucId)
     if (error) toast.error("Erreur lors du retrait")
@@ -317,7 +317,7 @@ export function SprintInlineDetail({
   const handleDeleteSprint = async () => {
     setDeleting(true)
     const supabase = createClient()
-    const { error } = await supabase.from("sprints").delete().eq("id", sprintId)
+    const { error } = await supabase.from("ia_lab_sprints").delete().eq("id", sprintId)
     setDeleting(false)
     setDeleteOpen(false)
     if (error) {

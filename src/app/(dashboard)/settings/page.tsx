@@ -124,7 +124,7 @@ export default function SettingsPage() {
 
     const [profileRes, tagsRes, profilesRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
-      supabase.from("tags").select("*").order("name"),
+      supabase.from("ia_lab_tags").select("*").order("name"),
       supabase.from("profiles").select("*").order("full_name"),
     ])
 
@@ -158,7 +158,7 @@ export default function SettingsPage() {
   const handleAddTag = async () => {
     if (!newTagName.trim()) return
     const supabase = createClient()
-    await supabase.from("tags").insert({
+    await supabase.from("ia_lab_tags").insert({
       name: newTagName.trim(),
       color: newTagColor,
     })
@@ -169,8 +169,8 @@ export default function SettingsPage() {
   const handleDeleteTag = async (tagId: string) => {
     const supabase = createClient()
     // Delete from use_case_tags first (junction table)
-    await supabase.from("use_case_tags").delete().eq("tag_id", tagId)
-    await supabase.from("tags").delete().eq("id", tagId)
+    await supabase.from("ia_lab_use_case_tags").delete().eq("tag_id", tagId)
+    await supabase.from("ia_lab_tags").delete().eq("id", tagId)
     fetchData()
   }
 
@@ -184,7 +184,7 @@ export default function SettingsPage() {
     if (!editingTagId || !editingTagName.trim()) return
     const supabase = createClient()
     await supabase
-      .from("tags")
+      .from("ia_lab_tags")
       .update({ name: editingTagName.trim(), color: editingTagColor })
       .eq("id", editingTagId)
     setEditingTagId(null)
@@ -214,13 +214,13 @@ export default function SettingsPage() {
     const supabase = createClient()
     // Remove from use_case_members
     await supabase
-      .from("use_case_members")
+      .from("ia_lab_use_case_members")
       .delete()
       .eq("profile_id", userId)
     // Update use_cases where this user is owner (set to current user)
     if (profile) {
       await supabase
-        .from("use_cases")
+        .from("ia_lab_use_cases")
         .update({ owner_id: profile.id })
         .eq("owner_id", userId)
     }

@@ -37,20 +37,20 @@ export default function BacklogPage() {
 
     const [ucRes, sprintsRes, sucRes] = await Promise.all([
       supabase
-        .from("use_cases")
+        .from("ia_lab_use_cases")
         .select(`
           *,
           owner:profiles!use_cases_owner_id_fkey(*),
-          sprint:sprints(*),
-          tags:use_case_tags(tag:tags(*))
+          sprint:ia_lab_sprints(*),
+          tags:ia_lab_use_case_tags(tag:ia_lab_tags(*))
         `)
         .order("created_at", { ascending: false }),
       supabase
-        .from("sprints")
+        .from("ia_lab_sprints")
         .select("*")
         .order("start_date", { ascending: false }),
       supabase
-        .from("sprint_use_cases")
+        .from("ia_lab_sprint_use_cases")
         .select("sprint_id, use_case_id"),
     ])
 
