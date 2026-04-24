@@ -47,7 +47,7 @@ src/
   components/
     backlog/     gallery/     sprints/  layout/     ui/   # shadcn components
   hooks/         lib/supabase/     types/database.ts      middleware.ts
-supabase/migrations/                    # 001 → 010, never edit old migrations
+supabase/migrations/                    # 000_ia_lab_initial.sql — the only migration; never edit it, add 011_ia_lab_* for further changes
 scripts/                                # Airtable import, ad-hoc fixes
 ```
 
