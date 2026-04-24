@@ -52,10 +52,11 @@ import type {
   Sprint,
   SprintUseCase,
   SprintUseCaseAssignment,
-  Profile,
   SprintStatus,
   UseCaseStatus,
 } from "@/types/database"
+import { listAllProfiles } from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 import { SPRINT_BUDGET_DAYS } from "@/types/database"
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -100,7 +101,7 @@ export default function SprintDetailPage() {
   const [sprint, setSprint] = useState<Sprint | null>(null)
   const [sprintUseCases, setSprintUseCases] = useState<SprintUseCase[]>([])
   const [originalSucs, setOriginalSucs] = useState<SprintUseCase[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [profiles, setProfiles] = useState<StafftoolProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -116,7 +117,7 @@ export default function SprintDetailPage() {
 
   const fetchData = useCallback(async () => {
     const supabase = createClient()
-    const [sprintRes, sucRes, profilesRes] = await Promise.all([
+    const [sprintRes, sucRes, allProfiles] = await Promise.all([
       supabase.from("ia_lab_sprints").select("*").eq("id", id).single(),
       supabase
         .from("ia_lab_sprint_use_cases")
@@ -125,7 +126,7 @@ export default function SprintDetailPage() {
         )
         .eq("sprint_id", id)
         .order("created_at"),
-      supabase.from("profiles").select("*").order("full_name"),
+      listAllProfiles(),
     ])
     if (sprintRes.data) setSprint(sprintRes.data)
     if (sucRes.data) {
@@ -140,7 +141,7 @@ export default function SprintDetailPage() {
       setOriginalSucs(JSON.parse(JSON.stringify(data)))
       setDirty(false)
     }
-    if (profilesRes.data) setProfiles(profilesRes.data as Profile[])
+    setProfiles(allProfiles)
     setLoading(false)
   }, [id])
 

@@ -69,13 +69,14 @@ import type {
   UseCase,
   UseCaseMetrics,
   UseCaseDocument,
-  Profile,
   Tag,
   UseCaseCategory,
   UseCaseStatus,
   PriorityLevel,
   MemberRole,
 } from "@/types/database"
+import { listAllProfiles } from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 
 const statusLabels: Record<string, string> = {
   backlog: "Backlog",
@@ -101,7 +102,7 @@ interface UseCaseDetailDialogProps {
 interface MemberEntry {
   profile_id: string
   role: MemberRole
-  profile?: Profile
+  profile?: StafftoolProfile
 }
 
 export function UseCaseDetailDialog({
@@ -142,7 +143,7 @@ export function UseCaseDetailDialog({
   const [newTagColor, setNewTagColor] = useState("#6366f1")
 
   // Members
-  const [allProfiles, setAllProfiles] = useState<Profile[]>([])
+  const [allProfiles, setAllProfiles] = useState<StafftoolProfile[]>([])
   const [ownerId, setOwnerId] = useState<string>("")
   const [membersList, setMembersList] = useState<MemberEntry[]>([])
   const [addMemberProfileId, setAddMemberProfileId] = useState("")
@@ -179,7 +180,7 @@ export function UseCaseDetailDialog({
 
     const supabase = createClient()
 
-    const [ucRes, metricsRes, membersRes, tagsRes, profilesRes, docsRes] =
+    const [ucRes, metricsRes, membersRes, tagsRes, allProfilesData, docsRes] =
       await Promise.all([
         supabase
           .from("ia_lab_use_cases")
@@ -198,7 +199,7 @@ export function UseCaseDetailDialog({
           .select("*, profile:profiles(*)")
           .eq("use_case_id", useCaseId),
         supabase.from("ia_lab_tags").select("*").order("name"),
-        supabase.from("profiles").select("*").order("full_name"),
+        listAllProfiles(),
         supabase
           .from("ia_lab_use_case_documents")
           .select("*")
@@ -207,7 +208,7 @@ export function UseCaseDetailDialog({
       ])
 
     if (tagsRes.data) setAllTags(tagsRes.data)
-    if (profilesRes.data) setAllProfiles(profilesRes.data)
+    setAllProfiles(allProfilesData)
 
     if (ucRes.data) {
       const uc = {
@@ -267,7 +268,7 @@ export function UseCaseDetailDialog({
         .map((m) => ({
           profile_id: m.profile_id,
           role: m.role as MemberRole,
-          profile: m.profile as Profile,
+          profile: m.profile as StafftoolProfile,
         }))
       setMembersList(entries)
       setOriginalMembers(entries.map((e) => ({ ...e })))

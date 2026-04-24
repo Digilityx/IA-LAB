@@ -17,13 +17,13 @@ import {
 import { Plus, Trash2, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 import type {
-  Profile,
   UcMission,
   UcDeal,
   UcCategoryHistoryEntry,
   UseCaseCategory,
 } from "@/types/database"
-import { getEffectiveTjm } from "@/lib/stafftool/profiles"
+import { getEffectiveTjm, listProfilesWithTjm } from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 
 interface Props {
   useCaseId: string
@@ -56,11 +56,11 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
   const [missions, setMissions] = useState<UcMission[]>([])
   const [deals, setDeals] = useState<UcDeal[]>([])
   const [history, setHistory] = useState<UcCategoryHistoryEntry[]>([])
-  const [consultants, setConsultants] = useState<Profile[]>([])
+  const [consultants, setConsultants] = useState<StafftoolProfile[]>([])
 
   const fetchAll = useCallback(async () => {
     const supabase = createClient()
-    const [mRes, dRes, hRes, cRes] = await Promise.all([
+    const [mRes, dRes, hRes, consultantsData] = await Promise.all([
       supabase
         .from("ia_lab_uc_missions")
         .select("*, consultant:profiles(*)")
@@ -76,16 +76,12 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
         .select("*, changed_by_profile:profiles!uc_category_history_changed_by_fkey(*)")
         .eq("use_case_id", useCaseId)
         .order("changed_at"),
-      supabase
-        .from("profiles")
-        .select("*")
-        .not("tjm", "is", null)
-        .order("full_name"),
+      listProfilesWithTjm(),
     ])
     if (mRes.data) setMissions(mRes.data as UcMission[])
     if (dRes.data) setDeals(dRes.data as UcDeal[])
     if (hRes.data) setHistory(hRes.data as UcCategoryHistoryEntry[])
-    if (cRes.data) setConsultants(cRes.data as Profile[])
+    setConsultants(consultantsData)
     setLoading(false)
   }, [useCaseId])
 
@@ -389,7 +385,7 @@ interface MissionSectionProps {
   subtitle: string
   category: "IMPACT" | "LAB"
   missions: UcMission[]
-  consultants: Profile[]
+  consultants: StafftoolProfile[]
   total: number
   showMissionAmount: boolean
   onAdd: () => void

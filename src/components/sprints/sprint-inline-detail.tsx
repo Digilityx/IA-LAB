@@ -39,11 +39,12 @@ import type {
   Sprint,
   SprintUseCase,
   SprintUseCaseAssignment,
-  Profile,
   SprintStatus,
   UseCaseStatus,
 } from "@/types/database"
 import { SPRINT_BUDGET_DAYS } from "@/types/database"
+import { listAllProfiles } from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 
 const ucStatusLabels: Record<string, string> = {
   backlog: "Backlog",
@@ -88,7 +89,7 @@ export function SprintInlineDetail({
 }: SprintInlineDetailProps) {
   const [sprintUseCases, setSprintUseCases] = useState<SprintUseCase[]>([])
   const [originalSucs, setOriginalSucs] = useState<SprintUseCase[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [profiles, setProfiles] = useState<StafftoolProfile[]>([])
   const [allSprints, setAllSprints] = useState<Sprint[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -98,7 +99,7 @@ export function SprintInlineDetail({
 
   const fetchData = useCallback(async () => {
     const supabase = createClient()
-    const [sucRes, profilesRes, sprintsRes] = await Promise.all([
+    const [sucRes, allProfiles, sprintsRes] = await Promise.all([
       supabase
         .from("ia_lab_sprint_use_cases")
         .select(
@@ -106,7 +107,7 @@ export function SprintInlineDetail({
         )
         .eq("sprint_id", sprintId)
         .order("created_at"),
-      supabase.from("profiles").select("*").order("full_name"),
+      listAllProfiles(),
       supabase.from("ia_lab_sprints").select("*").order("start_date"),
     ])
     if (sucRes.data) {
@@ -122,7 +123,7 @@ export function SprintInlineDetail({
       setOriginalSucs(JSON.parse(JSON.stringify(data)))
       setDirty(false)
     }
-    if (profilesRes.data) setProfiles(profilesRes.data as Profile[])
+    setProfiles(allProfiles)
     if (sprintsRes.data) setAllSprints(sprintsRes.data as Sprint[])
     setLoading(false)
   }, [sprintId])

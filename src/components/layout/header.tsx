@@ -4,21 +4,18 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { CommandPalette } from "@/components/layout/command-palette"
-import type { Profile } from "@/types/database"
+import { getProfile } from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 
 export function Header() {
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profile, setProfile] = useState<StafftoolProfile | null>(null)
 
   useEffect(() => {
     const fetchProfile = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single()
+        const data = await getProfile(user.id)
         if (data) setProfile(data)
       }
     }
