@@ -93,7 +93,7 @@ export default function SettingsPage() {
   // Profile state
   const [profile, setProfile] = useState<Profile | null>(null)
   const [fullName, setFullName] = useState("")
-  const [department, setDepartment] = useState("")
+  const [team, setTeam] = useState("")
   const [saving, setSaving] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -131,7 +131,7 @@ export default function SettingsPage() {
     if (profileRes.data) {
       setProfile(profileRes.data)
       setFullName(profileRes.data.full_name)
-      setDepartment(profileRes.data.department || "")
+      setTeam(profileRes.data.team || "")
       setIsAdmin(profileRes.data.role === "admin")
     }
     if (tagsRes.data) setTags(tagsRes.data)
@@ -149,7 +149,7 @@ export default function SettingsPage() {
     const supabase = createClient()
     await supabase
       .from("profiles")
-      .update({ full_name: fullName, department: department || null })
+      .update({ full_name: fullName, team: team || null })
       .eq("id", profile.id)
     setSaving(false)
   }
@@ -205,7 +205,7 @@ export default function SettingsPage() {
     const supabase = createClient()
     await supabase
       .from("profiles")
-      .update({ department: newDept || null })
+      .update({ team: newDept || null })
       .eq("id", userId)
     fetchData()
   }
@@ -238,7 +238,7 @@ export default function SettingsPage() {
       email: `placeholder+${id.slice(0, 8)}@project-hub.local`,
       role: "member",
       is_placeholder: true,
-      department: newPlaceholderDept || null,
+      team: newPlaceholderDept || null,
     })
     setNewPlaceholderName("")
     setNewPlaceholderDept("")
@@ -303,10 +303,10 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Département</Label>
+                <Label>Équipe</Label>
                 <Input
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
+                  value={team}
+                  onChange={(e) => setTeam(e.target.value)}
                   placeholder="Ex: Data & IA"
                 />
               </div>
@@ -551,7 +551,7 @@ export default function SettingsPage() {
                       <TableHead className="w-10"></TableHead>
                       <TableHead>Nom</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Département</TableHead>
+                      <TableHead>Équipe</TableHead>
                       <TableHead className="w-24">TJM (€/j)</TableHead>
                       <TableHead>Rôle</TableHead>
                       <TableHead className="w-16">Type</TableHead>
@@ -591,7 +591,7 @@ export default function SettingsPage() {
                           </TableCell>
                           <TableCell>
                             <DepartmentEditor
-                              value={p.department || ""}
+                              value={p.team || ""}
                               onSave={(val) =>
                                 handleUpdateUserDepartment(p.id, val)
                               }
