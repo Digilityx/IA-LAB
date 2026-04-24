@@ -159,12 +159,12 @@ Project-hub is pre-production and has no live data to preserve. The **10 existin
    ```sql
    CREATE FUNCTION ia_lab_list_all_missions()
    RETURNS TABLE (
-     id UUID, name TEXT, client TEXT, status TEXT, start_date DATE, end_date DATE
+     id UUID, label TEXT, type TEXT, client_id UUID, start_date DATE, end_date DATE
    )
    LANGUAGE sql SECURITY DEFINER STABLE
    SET search_path = public
    AS $$
-     SELECT m.id, m.name, m.client, m.status, m.start_date, m.end_date
+     SELECT m.id, m.label, m.type, m.client_id, m.start_date, m.end_date
      FROM missions m
      WHERE has_ia_lab_role(ARRAY['admin']::ia_lab_role[]);
    $$;
@@ -196,7 +196,12 @@ Users log in to each app separately (no SSO in v1) but with the same credentials
 
 ### 5.2 Role system
 
-Project-hub's roles are **orthogonal** to stafftool's. Stafftool has its own `user_roles` table (`admin`, `manager`, …). Project-hub uses `ia_lab_user_roles` (`member`, `admin`), managed entirely inside project-hub's Settings UI.
+Project-hub's roles are **orthogonal** to everything stafftool has. Stafftool actually has **two** role-ish concepts on its side:
+
+1. **`profiles.role`** (TEXT, single value per user, e.g. `"consultant"`) — a *user category*, not a permission grant. Think of it as the person's professional role inside the company.
+2. **`user_roles`** (separate table, values like `admin`, `manager`) — actual permission grants used in RLS.
+
+Project-hub touches neither. We add a **third** system, `ia_lab_user_roles`, entirely in our domain and managed from project-hub's Settings UI.
 
 | `ia_lab_user_roles.role` | Capabilities in project-hub |
 |---|---|
@@ -232,9 +237,9 @@ Three overlapping guarantees:
 2. **CI grep-guard** — a CI step fails the build if any `.ts` file outside `src/lib/stafftool/` contains `.from('profiles'|'missions'|'clients'|'cras'|'user_roles'|'mission_consultants'|'expenses'|'expertises'|'mission_feedbacks'|'absences'|…)`. Reviewers don't have to remember the rule.
 3. **RLS as last line of defense** — stafftool's existing RLS policies continue to apply; an accidental write from project-hub would be rejected unless the user is also a stafftool admin (an acceptable residual risk for an internal tool).
 
-### 5.5 TJM handling
+### 5.5 TJM/CJM handling
 
-Stafftool stores `tjm` on `profiles` as JSONB (per `20241205_convert_tjm_cjm_to_jsonb.sql`), likely keyed by effective period. **`src/lib/stafftool/profiles.ts`** owns a single `getEffectiveTjm(profile, atDate?)` helper that picks the rate for a given date. The rest of project-hub sees only a `number | null`. The exact JSONB shape must be verified against stafftool data before implementing — listed in the pre-launch checklist.
+Stafftool stores `tjm` and `cjm` on `profiles` as **year-keyed JSONB** — confirmed from both the `20241205_convert_tjm_cjm_to_jsonb.sql` migration comment and a live probe: `{"2024": 800, "2025": 800, "2026": 800}`. **`src/lib/stafftool/profiles.ts`** owns `getEffectiveTjm(profile, year?: number)` and `getEffectiveCjm(profile, year?: number)` helpers (year defaults to current). Everywhere else in project-hub sees `number | null`. If a new year's rate doesn't exist on a profile, the helper returns the nearest prior year's rate (or `null` if none).
 
 ---
 
@@ -244,8 +249,8 @@ Stafftool stores `tjm` on `profiles` as JSONB (per `20241205_convert_tjm_cjm_to_
 
 | Stafftool table | Columns read | Usage | Frequency |
 |---|---|---|---|
-| `profiles` | `id`, `full_name`, `email`, `avatar_url`, `department`, `tjm` | UC owner/member cards, kanban, list view, detail Sheet, sprint assignees, gallery, Settings → Utilisateurs, metrics attribution | Every page with UC or sprint data |
-| `missions` | `id`, `name`, `client`, `status`, `start_date`, `end_date` | Linked mission display on UC detail; admin "link mission" picker | On-demand |
+| `profiles` | `id`, `full_name`, `email`, `avatar_url`, `team`, `tjm`, `cjm`, `role`, `arrival_date`, `departure_date` | UC owner/member cards, kanban, list view, detail Sheet, sprint assignees, gallery, Settings → Utilisateurs, metrics attribution | Every page with UC or sprint data |
+| `missions` | `id`, `label`, `type`, `client_id` (+ `clients(name)` embed), `start_date`, `end_date` | Linked mission display on UC detail; admin "link mission" picker | On-demand |
 | `clients`, `cras`, `mission_consultants`, `user_roles`, `expenses`, `expertises`, `absences` | — | Not read in v1 | — |
 
 ### 6.2 Read mechanics
@@ -259,8 +264,8 @@ supabase
   .from('ia_lab_use_cases')
   .select(`
     *,
-    owner:profiles!owner_id(id, full_name, avatar_url, department),
-    mission:missions!mission_id(id, name, client, status)
+    owner:profiles!owner_id(id, full_name, avatar_url, team),
+    mission:missions!mission_id(id, label, type, client:clients(name))
   `)
 ```
 
@@ -366,8 +371,8 @@ Rewrite `scripts/import-airtable.ts`:
 |---|---|---|---|
 | Preview deploys write to prod DB | Certain | Low-medium | `[DEV]` prefix convention, `--confirm` on destructive scripts, CI grep-guard |
 | Stafftool admin deletes a profile with UC ownership | Low | Low | `SET NULL` on `owner_id`; UI renders "Ancien propriétaire" gracefully |
-| TJM JSONB shape assumed, not verified | Medium | Low | Pre-launch SELECT to confirm; runtime shape guard in `getEffectiveTjm` |
-| `missions` columns assumed (name vs title, etc.) | Medium | Low | Pre-launch SELECT to confirm; adjust `ia_lab_list_all_missions` RETURNS TABLE |
+| TJM JSONB shape | ~~unknown~~ **verified year-keyed** via live probe | — | Runtime shape guard in `getEffectiveTjm` still included as belt-and-suspenders |
+| `missions` columns | ~~assumed~~ **inferred from source + partially verified** | Low | Appendix A3; RPC column whitelist uses only confirmed fields; re-verify at migration time |
 | Stafftool schema drift breaks our wrappers | Low | Medium | `src/lib/stafftool/*` is single blast zone; trivially patchable |
 | Previous dev's local data lost if no dump | Medium | Low-medium | Instructions provided; CSVs are canonical anyway |
 | Stafftool's corrupted `types.ts` | N/A to us | N/A | We define our own types in `src/lib/stafftool/types.ts`; flag to stafftool team |
@@ -377,17 +382,12 @@ Rewrite `scripts/import-airtable.ts`:
 
 ## 9. Pre-launch checklist
 
-- [ ] **Stafftool `auth.users.id` for bootstrap admin.** Get from Supabase dashboard → Authentication → Users, search for your email.
-- [ ] **`profiles` column list.** Run in Supabase SQL editor:
-  ```sql
-  SELECT column_name, data_type FROM information_schema.columns
-  WHERE table_schema='public' AND table_name='profiles' ORDER BY ordinal_position;
-  ```
-  Confirm: `id`, `full_name`, `email`, `avatar_url`, `department`, `tjm` (JSONB shape) exist. Note anything else for the wrapper.
-- [ ] **`missions` column list.** Same query with `table_name='missions'`. Confirm: `id`, `name` (vs `title`?), `client`, `status`, `start_date`, `end_date`. Adjust RPC's `RETURNS TABLE` to match.
-- [ ] **TJM JSONB shape.** `SELECT tjm FROM profiles WHERE tjm IS NOT NULL LIMIT 3;` — eyeball the shape before implementing `getEffectiveTjm`.
-- [ ] **Previous dev's DB dump** (optional). See "Instructions to forward to the previous dev" below.
-- [ ] **Pre-flight collision check** (§ 7.3) passes clean.
+- [ ] **Stafftool `auth.users.id` for bootstrap admin.** Get from Supabase dashboard → Authentication → Users, search for your email. *Still needed from user.*
+- [x] **`profiles` column list.** Verified via live probe against prod (anon role can read). See Appendix § A2.
+- [x] **TJM / CJM JSONB shape.** Verified year-keyed, e.g. `{"2024": 800, "2025": 800, "2026": 800}`.
+- [ ] **`missions` column list.** Partially verified from stafftool source code grep; confirmed fields: `id`, `label`, `type`, `client_id`, `manager_id`, `responsable_id`, `start_date`, `end_date`, `pipeline_budget`, `signed_budget`, `total_budget`, `created_at`. Full schema needs auth to verify; RPC column whitelist (§ 4 #7) only uses confirmed fields. *Good enough to proceed; re-confirm at migration time.*
+- [ ] **Previous dev's DB dump** (optional). French message ready to forward (§ 11). *User to contact previous dev.*
+- [ ] **Pre-flight collision check** (§ 7.3) passes clean. *Runs against prod at migration time; `ia_lab_*` prefix keeps collision risk extremely low.*
 
 ---
 
@@ -429,7 +429,9 @@ Message à transférer tel quel (le dev précédent est francophone).
 
 ## Appendix — Stafftool inspection notes
 
-Gathered 2026-04-23/24 from `C:/Users/enzor/OneDrive/Bureau/stafftool/` (latest pull).
+Gathered 2026-04-23/24 from `C:/Users/enzor/OneDrive/Bureau/stafftool/` (latest pull) and a live PostgREST probe against stafftool prod using the public anon key.
+
+### A1. Stack & deployment
 
 **Stack:** Vite + React 18.2 + TS + shadcn + Tailwind 3 + Bun. Originally scaffolded via Lovable.dev. `@supabase/supabase-js` 2.49 — client-only, localStorage sessions.
 
@@ -439,11 +441,58 @@ Gathered 2026-04-23/24 from `C:/Users/enzor/OneDrive/Bureau/stafftool/` (latest 
 - Prod: `fflrtslsujuweggxylbd` — target of this merge
 - Dev/preprod: `czwuvdzigpqotktwygji` — noted as stale, not used here
 
-**Relevant tables inferred** from `src/` folder layout and root SQL files: `profiles` (user identity; stafftool UI calls them "consultants"), `missions`, `mission_consultants` (junction), `mission_feedbacks`, `clients`, `cras` (timesheets), `expenses`, `expertises`, `user_roles`, `revenue_targets`, `absences`, `consultants_targets`, `teams`.
+### A2. `profiles` — verified columns (live probe)
 
-**Known quirks in stafftool repo** (flagged to stafftool team, not ours to fix):
+Reading a real row from prod via `GET /rest/v1/profiles?limit=1&select=*` with the public anon key succeeds — stafftool's RLS on `profiles` allows anon SELECT. Full column list:
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID (FK `auth.users.id`) | PK |
+| `email` | TEXT | |
+| `full_name` | TEXT | |
+| `created_at`, `updated_at` | TIMESTAMPTZ | |
+| `team` | TEXT | e.g. `"marketing"` — **NOT** `department` |
+| `seniority` | TEXT / numeric | nullable |
+| `holidays_current_year` | NUMERIC | |
+| `holidays_previous_year` | NUMERIC | |
+| `holidays_two_years_ago` | NUMERIC | |
+| `rtt` | NUMERIC | RTT balance |
+| `arrival_date` | DATE | |
+| `departure_date` | DATE | nullable |
+| `avatar_url` | TEXT | Supabase Storage public URL |
+| `managed` | — | nullable; semantics unclear |
+| `expertises` | JSONB | shape `{ expertises: [{ id, name, grade }] }` — potentially useful for future UC skill matching |
+| `can_access_feature` | BOOLEAN | feature flag |
+| `role` | TEXT | e.g. `"consultant"` — user category, NOT a permission grant |
+| `slack_id` | TEXT | nullable |
+| `tjm` | JSONB | year-keyed: `{"2024": 800, "2025": 800, "2026": 800}` |
+| `cjm` | JSONB | year-keyed, same shape |
+
+### A3. `missions` — columns inferred from source code
+
+Live probe returns `[]` (RLS denies anon — see § 6.3). From grepping stafftool's `src/`:
+
+| Column | Type | Evidence |
+|---|---|---|
+| `id` | UUID | PK, used everywhere |
+| `label` | TEXT | `.select('id, label, ...')` in Activities, Expertises, CRA, Missions pages |
+| `type` | TEXT | `.select('id, label, clients (name), type')` in Activities |
+| `client_id` | UUID (FK `clients.id`) | embeds via `clients:client_id(...)` |
+| `manager_id` | UUID (FK `profiles.id`) | mission RLS policy |
+| `responsable_id` | UUID (FK `profiles.id`) | mission RLS policy |
+| `start_date`, `end_date` | DATE | year filter in `useMissionsData` |
+| `pipeline_budget`, `signed_budget`, `total_budget` | NUMERIC | MissionDetailsDialog |
+| `created_at` | TIMESTAMPTZ | ordering |
+
+### A4. Other relevant tables (names only, inferred from source and SQL files)
+
+`mission_consultants` (M2M profile ↔ mission with `daily_rate`, `monthly_days`, `status`), `mission_expertises`, `mission_feedbacks`, `clients`, `cras` (timesheets, key column `mission_consultant_id`), `expenses`, `expertises`, `ressources`, `user_roles`, `revenue_targets`, `consultants_targets`, `absences`, `teams`.
+
+### A5. Stafftool repo quirks (not ours to fix, flag to stafftool team)
+
 - `src/integrations/supabase/types.ts` is corrupted — contains stray `Need to install the following packages:` CLI output from an earlier accidental `npx supabase ... > types.ts` redirection.
-- Hardcoded Supabase URLs + anon keys in `src/integrations/supabase/client.ts` rather than env vars.
+- Hardcoded Supabase URLs + anon keys in `src/integrations/supabase/client.ts` instead of env vars.
+- `profiles` is readable by anon role — surprising for prod, but given the data is non-sensitive directory info (names, team, TJM) and consistent with stafftool needing unauthenticated pre-login lookups, probably intentional.
 
 ---
 
