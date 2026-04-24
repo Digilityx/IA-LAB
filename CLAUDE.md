@@ -24,7 +24,9 @@ No `vercel.json` / `vercel.ts` yet. `next.config.ts` is empty.
 npm run dev              # next dev
 npm run build            # next build
 npm run lint             # eslint
-npm run import:airtable  # tsx scripts/import-airtable.ts — imports the 5 CSVs at repo root
+npm run import:airtable  # tsx scripts/import-airtable.ts — ALWAYS use --dry-run first:
+                         # npx tsx scripts/import-airtable.ts --dry-run
+                         # npx tsx scripts/import-airtable.ts --confirm
 ```
 
 ## Project layout
@@ -62,11 +64,12 @@ Don't import the server client in a client component or vice-versa.
 
 ### Auth & authorization
 - Session gate: `src/middleware.ts` — every non-static route passes through `updateSession`.
-- RLS is the source of truth. UI checks (`profile.role === 'admin'`) are for UX only — always assume the DB will reject the action too.
-- Placeholder profiles: `is_placeholder = true`. Only admins may delete them. Regular users can't be deleted from the UI.
+- RLS is the source of truth. UI checks are for UX only — always assume the DB will reject the action too.
+- Gate project-hub UI with `hasIaLabRole(['admin','member'])` from `src/lib/ia-lab-roles.ts`. Server code reads `ia_lab_user_roles` directly.
 
 ### Types
 - Single source: `src/types/database.ts`. Joined fields (`owner?`, `sprint?`, `members?`, `tags?`, `metrics?`) are optional — guard them.
+- `Profile` type reflects stafftool's schema: `team` (not `department`), `tjm` is a year-keyed JSONB object — use `getEffectiveTjm` to extract the value for a given year.
 - `SPRINT_BUDGET_DAYS = 23` is a hard constant, not configurable.
 - `use_case_metrics.man_days_saved` is a **generated column** (`estimated - actual`). Never write to it.
 
@@ -88,6 +91,7 @@ Statuses, categories, priorities, roles are enforced as PG enums. Adding a value
 
 ### Data imports
 - `scripts/import-airtable.ts` reads the five `BDD UCs livrés Airtable - *.csv` files at repo root. Keep them UTF-8 — migration 006 exists specifically to undo mojibake from a past bad import.
+- **Always run with `--dry-run` first**, then `--confirm` to apply.
 
 ---
 
@@ -111,7 +115,28 @@ Implementation order is spelled out at the bottom of `PLAN.md` — follow it unl
 - **Don't push to `main`.** Open a PR for anything non-trivial.
 - **French UI, English code.** Keep the separation.
 
+## Data
+
+Project-hub shares stafftool's production Supabase DB (`fflrtslsujuweggxylbd`). Project-hub-owned tables use the `ia_lab_*` prefix; everything else is stafftool's.
+
+- **Project-hub-owned (CRUD here):** `ia_lab_use_cases`, `ia_lab_sprints`, `ia_lab_tags`, `ia_lab_use_case_members`, `ia_lab_use_case_tags`, `ia_lab_use_case_metrics`, `ia_lab_use_case_documents`, `ia_lab_sprint_use_cases`, `ia_lab_sprint_use_case_assignments`, `ia_lab_uc_missions`, `ia_lab_uc_deals`, `ia_lab_uc_category_history`, `ia_lab_interest_requests`, `ia_lab_user_roles`.
+- **Stafftool-owned (READ ONLY):** `profiles`, `missions`, `clients`, `cras`, `user_roles`, `mission_consultants`, `expenses`, `expertises`, etc. Access only through `src/lib/stafftool/*`. CI grep-guard blocks direct `.from('...')` calls outside the wrapper.
+- **Enums:** all project-hub enums use the `ia_lab_` prefix (`ia_lab_role`, `ia_lab_sprint_status`, ...).
+
+## Roles
+
+Project-hub uses its own `ia_lab_user_roles` table (values: `member`, `admin`; absence = viewer). It is orthogonal to stafftool's own `profiles.role` (user category) and `user_roles` (stafftool permissions). Gate UI with `hasIaLabRole(['admin','member'])` from `src/lib/ia-lab-roles.ts`. Server code reads `ia_lab_user_roles` directly. RLS is the authority.
+
 ## Environment
 
-- `.env*` is gitignored. Supabase keys live in `.env.local` (not in the repo). When the user runs `npm run dev` locally, they need `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` set.
-- Not deployed on Vercel yet (no `.vercel/`, no `vercel.json`/`vercel.ts`). If deployment comes up, ask whether to configure it.
+Single env — prod. Local dev, PR previews, and production all point at the same Supabase. Prefix temp UC titles with `[DEV]` during dev/testing. Schema changes are applied manually via Supabase CLI, never by Vercel.
+
+- `.env*` is gitignored (except `.env.example`). Supabase keys live in `.env.local`. Copy from `.env.example` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+
+## Key files
+
+- `src/lib/stafftool/` — the ONLY place allowed to read stafftool tables. Wrappers: `profiles.ts`, `missions.ts`. Types: `types.ts`.
+- `src/lib/ia-lab-roles.ts` — `hasIaLabRole`, `isIaLabAdmin`, `getCurrentIaLabRole`.
+- `src/types/database.ts` — shared `Profile` type (reflects stafftool's schema: `team` not `department`, `tjm` JSONB year-keyed).
+- `supabase/migrations/000_ia_lab_initial.sql` — the only migration; all `ia_lab_*` schema lives here.
+- `scripts/import-airtable.ts` — CSV import. ALWAYS `--dry-run` first.
