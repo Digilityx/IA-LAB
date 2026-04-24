@@ -480,3 +480,23 @@ $$;
 
 REVOKE ALL ON FUNCTION ia_lab_list_all_missions() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ia_lab_list_all_missions() TO authenticated;
+
+-- =========================================================================
+-- BOOTSTRAP
+-- Replace <YOUR_STAFFTOOL_AUTH_UID> with the UID obtained from:
+-- Supabase dashboard → Authentication → Users → search your email
+-- This INSERT is the only way to create the first IA Lab admin, because
+-- the "Admins manage roles" policy requires an existing admin.
+-- =========================================================================
+
+INSERT INTO ia_lab_user_roles (user_id, role, notes)
+VALUES (
+  '<YOUR_STAFFTOOL_AUTH_UID>'::uuid,
+  'admin',
+  'Bootstrap admin — created by migration 000_ia_lab_initial.sql'
+)
+ON CONFLICT (user_id) DO NOTHING;
+
+-- End of 000_ia_lab_initial.sql
+-- Before applying: replace <YOUR_STAFFTOOL_AUTH_UID> above.
+-- After applying: run scripts/post-apply-verification.sql and confirm rowcount > 0 on ia_lab_user_roles.
