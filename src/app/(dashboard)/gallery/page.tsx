@@ -52,7 +52,7 @@ export default function GalleryPage() {
         ...uc,
         tags: uc.tags?.map((t: { tag: unknown }) => t.tag).filter(Boolean) || [],
         interest_count:
-          (uc.interest_requests as unknown as { count: number }[])?.[0]?.count || 0,
+          (uc.ia_lab_interest_requests as unknown as { count: number }[])?.[0]?.count || 0,
       }))
       setUseCases(transformed as (UseCase & { interest_count: number })[])
     }
