@@ -103,7 +103,7 @@ export function SprintInlineDetail({
       supabase
         .from("ia_lab_sprint_use_cases")
         .select(
-          "*, use_case:ia_lab_use_cases(*, owner:profiles!use_cases_owner_id_fkey(*)), assignments:ia_lab_sprint_use_case_assignments(*, profile:profiles(*))"
+          "*, use_case:ia_lab_use_cases(*, owner:profiles!ia_lab_use_cases_owner_id_fkey(*)), assignments:ia_lab_sprint_use_case_assignments(*, profile:profiles(*))"
         )
         .eq("sprint_id", sprintId)
         .order("created_at"),

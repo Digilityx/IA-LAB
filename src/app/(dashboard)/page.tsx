@@ -72,7 +72,7 @@ export default function DashboardPage() {
       // Fetch use cases for active sprint
       const { data: sprintUc } = await supabase
         .from("ia_lab_use_cases")
-        .select("*, owner:profiles!use_cases_owner_id_fkey(*)")
+        .select("*, owner:profiles!ia_lab_use_cases_owner_id_fkey(*)")
         .eq("sprint_id", sprintRes.data.id)
         .order("created_at")
       if (sprintUc) setSprintUseCases(sprintUc as UseCase[])

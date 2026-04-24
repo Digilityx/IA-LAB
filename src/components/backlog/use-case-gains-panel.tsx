@@ -73,7 +73,7 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
         .order("created_at"),
       supabase
         .from("ia_lab_uc_category_history")
-        .select("*, changed_by_profile:profiles!uc_category_history_changed_by_fkey(*)")
+        .select("*, changed_by_profile:profiles!ia_lab_uc_category_history_changed_by_fkey(*)")
         .eq("use_case_id", useCaseId)
         .order("changed_at"),
       listProfilesWithTjm(),

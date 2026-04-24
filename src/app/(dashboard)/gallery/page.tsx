@@ -38,9 +38,9 @@ export default function GalleryPage() {
         .from("ia_lab_use_cases")
         .select(`
           *,
-          owner:profiles!use_cases_owner_id_fkey(*),
+          owner:profiles!ia_lab_use_cases_owner_id_fkey(*),
           tags:ia_lab_use_case_tags(tag:ia_lab_tags(*)),
-          interest_requests(count)
+          ia_lab_interest_requests(count)
         `)
         .eq("is_published", true)
         .order("updated_at", { ascending: false }),

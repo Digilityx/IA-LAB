@@ -42,7 +42,7 @@ export interface UseCase {
   category: UseCaseCategory
   priority: PriorityLevel
   sprint_id: string | null
-  owner_id: string
+  owner_id: string | null
   documentation: string | null
   is_published: boolean
   cover_image_url: string | null
@@ -146,7 +146,7 @@ export interface UseCaseAccompaniment {
 export interface UcMission {
   id: string
   use_case_id: string
-  category: 'IMPACT' | 'LAB'
+  category: UseCaseCategory
   consultant_id: string | null
   mission_client: string | null
   days_saved: number | null

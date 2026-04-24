@@ -185,7 +185,7 @@ export function UseCaseDetailDialog({
         supabase
           .from("ia_lab_use_cases")
           .select(
-            `*, owner:profiles!use_cases_owner_id_fkey(*), sprint:ia_lab_sprints(*), tags:ia_lab_use_case_tags(tag:ia_lab_tags(*))`
+            `*, owner:profiles!ia_lab_use_cases_owner_id_fkey(*), sprint:ia_lab_sprints(*), tags:ia_lab_use_case_tags(tag:ia_lab_tags(*))`
           )
           .eq("id", useCaseId)
           .single(),
@@ -219,7 +219,7 @@ export function UseCaseDetailDialog({
             .filter(Boolean) || [],
       } as UseCase
       setUseCase(uc)
-      setOwnerId(uc.owner_id)
+      setOwnerId(uc.owner_id ?? "")
       setTitle(uc.title)
       setDescription(uc.description)
       setDocumentation(uc.documentation || "")
@@ -395,7 +395,7 @@ export function UseCaseDetailDialog({
       status,
       category,
       priority,
-      owner_id: ownerId,
+      owner_id: ownerId || null,
     }
     const newFieldValue = (val: string) =>
       val && val !== "none" ? val : null

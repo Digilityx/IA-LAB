@@ -40,7 +40,7 @@ export default function BacklogPage() {
         .from("ia_lab_use_cases")
         .select(`
           *,
-          owner:profiles!use_cases_owner_id_fkey(*),
+          owner:profiles!ia_lab_use_cases_owner_id_fkey(*),
           sprint:ia_lab_sprints(*),
           tags:ia_lab_use_case_tags(tag:ia_lab_tags(*))
         `)
