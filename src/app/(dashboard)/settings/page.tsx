@@ -55,6 +55,7 @@ import {
   Eye,
 } from "lucide-react"
 import type { Profile, Tag as TagType, UserRole } from "@/types/database"
+import { getEffectiveTjm } from "@/lib/stafftool/profiles"
 
 const TAG_COLORS = [
   "#ef4444",
@@ -602,7 +603,7 @@ export default function SettingsPage() {
                               type="number"
                               min={0}
                               step={50}
-                              value={p.tjm ?? ""}
+                              value={getEffectiveTjm(p) ?? ""}
                               onChange={async (e) => {
                                 const val = e.target.value
                                   ? parseFloat(e.target.value)

@@ -23,6 +23,7 @@ import type {
   UcCategoryHistoryEntry,
   UseCaseCategory,
 } from "@/types/database"
+import { getEffectiveTjm } from "@/lib/stafftool/profiles"
 
 interface Props {
   useCaseId: string
@@ -125,7 +126,7 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
     if (!consultant) return
     await updateMission(id, {
       consultant_id: consultantId,
-      tjm_snapshot: consultant.tjm ?? null,
+      tjm_snapshot: getEffectiveTjm(consultant) ?? null,
     })
     // Refresh to pull joined consultant
     const supabase = createClient()
@@ -443,7 +444,7 @@ function MissionSection({
                   <SelectContent>
                     {consultants.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.full_name} — {formatEUR(c.tjm ?? 0)}/j
+                        {c.full_name} — {formatEUR(getEffectiveTjm(c) ?? 0)}/j
                       </SelectItem>
                     ))}
                   </SelectContent>
