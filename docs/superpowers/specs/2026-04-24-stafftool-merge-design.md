@@ -320,6 +320,11 @@ If any row appears → rename before applying.
 
 Schema is applied **manually** via Supabase CLI (`supabase db push`) or SQL editor — **never** by Vercel. Vercel deploys code only. Rationale: separation of concerns and accident-proofing.
 
+**Migration history interplay.** Supabase tracks applied migrations in `supabase_migrations.schema_migrations` on each database. Both project-hub and stafftool will be pushing migrations into the same DB from separate repos, which means either repo's `supabase db push` sees migrations applied by the other. This is fine — the CLI is idempotent against its history — but two conventions keep it clean:
+
+1. **Filename disambiguation** — project-hub's migration is `000_ia_lab_initial.sql`; any future project-hub migrations carry an `ia_lab_` prefix (`011_ia_lab_add_X.sql`). Stafftool keeps its own date-prefixed format. No filename collision possible.
+2. **Never run `supabase db reset` against prod from either repo** — it would rebuild schema from only that repo's migrations and drop the other side's objects. This is already a taboo for stafftool prod; we adopt the same rule on project-hub side.
+
 Rollback is a single script: `DROP TABLE ia_lab_* CASCADE; DROP FUNCTION ia_lab_*; DROP TYPE ia_lab_*;`. Since nothing stafftool-owned was touched, teardown is trivial.
 
 ### 7.5 CSV import adaptation
