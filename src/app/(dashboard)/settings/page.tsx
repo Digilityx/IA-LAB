@@ -57,6 +57,7 @@ import {
 import type { Tag as TagType } from "@/types/database"
 import {
   getProfile,
+  searchProfiles,
   getEffectiveTjm,
 } from "@/lib/stafftool/profiles"
 import type { StafftoolProfile } from "@/lib/stafftool/types"
@@ -121,13 +122,10 @@ export default function SettingsPage() {
     } = await supabase.auth.getUser()
     if (!user) return
 
-    const [profileData, tagsRes, profilesRes] = await Promise.all([
+    const [profileData, tagsRes, allProfilesData] = await Promise.all([
       getProfile(user.id),
       supabase.from("ia_lab_tags").select("*").order("name"),
-      supabase
-        .from("profiles")
-        .select("id, email, full_name, avatar_url, team, arrival_date, departure_date, tjm, cjm, role, can_access_feature")
-        .order("full_name"),
+      searchProfiles(""),
     ])
 
     if (profileData) {
@@ -135,7 +133,7 @@ export default function SettingsPage() {
       isIaLabAdmin().then(setIsAdmin)
     }
     if (tagsRes.data) setTags(tagsRes.data)
-    if (profilesRes.data) setAllProfiles(profilesRes.data as StafftoolProfile[])
+    setAllProfiles(allProfilesData)
   }, [])
 
   useEffect(() => {
