@@ -26,8 +26,9 @@ import type {
   UseCaseCategory,
   PriorityLevel,
   Sprint,
-  Profile,
 } from "@/types/database"
+import { searchProfiles } from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 
 interface CreateUseCaseDialogProps {
   onCreated: () => void
@@ -37,7 +38,7 @@ export function CreateUseCaseDialog({ onCreated }: CreateUseCaseDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [sprints, setSprints] = useState<Sprint[]>([])
-  const [members, setMembers] = useState<Profile[]>([])
+  const [members, setMembers] = useState<StafftoolProfile[]>([])
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -53,13 +54,13 @@ export function CreateUseCaseDialog({ onCreated }: CreateUseCaseDialogProps) {
     if (!open) return
     const fetchData = async () => {
       const supabase = createClient()
-      const [sprintsRes, membersRes, userRes] = await Promise.all([
+      const [sprintsRes, membersData, userRes] = await Promise.all([
         supabase.from("ia_lab_sprints").select("*").order("start_date", { ascending: false }),
-        supabase.from("profiles").select("*").order("full_name"),
+        searchProfiles(""),
         supabase.auth.getUser(),
       ])
       if (sprintsRes.data) setSprints(sprintsRes.data)
-      if (membersRes.data) setMembers(membersRes.data)
+      setMembers(membersData)
       if (userRes.data.user) setOwnerId(userRes.data.user.id)
     }
     fetchData()

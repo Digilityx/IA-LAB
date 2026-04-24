@@ -54,14 +54,13 @@ import {
   Settings,
   Eye,
 } from "lucide-react"
-import type { Profile, Tag as TagType } from "@/types/database"
-import { getEffectiveTjm } from "@/lib/stafftool/profiles"
+import type { Tag as TagType } from "@/types/database"
+import {
+  getProfile,
+  getEffectiveTjm,
+} from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 import { isIaLabAdmin } from "@/lib/ia-lab-roles"
-
-// Profiles fetched from the DB may still carry is_placeholder; we keep a
-// local extension so we don't lose that display capability while the
-// placeholder feature is migrated to the new schema.
-type ProfileRow = Profile & { is_placeholder?: boolean }
 
 const TAG_COLORS = [
   "#ef4444",
@@ -98,10 +97,7 @@ const categoryConfig = [
 
 export default function SettingsPage() {
   // Profile state
-  const [profile, setProfile] = useState<ProfileRow | null>(null)
-  const [fullName, setFullName] = useState("")
-  const [team, setTeam] = useState("")
-  const [saving, setSaving] = useState(false)
+  const [profile, setProfile] = useState<StafftoolProfile | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
   // Tags state
@@ -113,11 +109,7 @@ export default function SettingsPage() {
   const [editingTagColor, setEditingTagColor] = useState("")
 
   // Users state
-  const [allProfiles, setAllProfiles] = useState<ProfileRow[]>([])
-
-  // Placeholder creation
-  const [newPlaceholderName, setNewPlaceholderName] = useState("")
-  const [newPlaceholderDept, setNewPlaceholderDept] = useState("")
+  const [allProfiles, setAllProfiles] = useState<StafftoolProfile[]>([])
 
   // Display preferences
   const [displayPrefs, setDisplayPrefs] = useDisplayPrefs()
@@ -129,37 +121,26 @@ export default function SettingsPage() {
     } = await supabase.auth.getUser()
     if (!user) return
 
-    const [profileRes, tagsRes, profilesRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).single(),
+    const [profileData, tagsRes, profilesRes] = await Promise.all([
+      getProfile(user.id),
       supabase.from("ia_lab_tags").select("*").order("name"),
-      supabase.from("profiles").select("*").order("full_name"),
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, avatar_url, team, arrival_date, departure_date, tjm, cjm, role, can_access_feature")
+        .order("full_name"),
     ])
 
-    if (profileRes.data) {
-      setProfile(profileRes.data)
-      setFullName(profileRes.data.full_name)
-      setTeam(profileRes.data.team || "")
+    if (profileData) {
+      setProfile(profileData)
       isIaLabAdmin().then(setIsAdmin)
     }
     if (tagsRes.data) setTags(tagsRes.data)
-    if (profilesRes.data) setAllProfiles(profilesRes.data)
+    if (profilesRes.data) setAllProfiles(profilesRes.data as StafftoolProfile[])
   }, [])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
-
-  // ---- Profile handlers ----
-  const handleSaveProfile = async () => {
-    if (!profile) return
-    setSaving(true)
-    const supabase = createClient()
-    await supabase
-      .from("profiles")
-      .update({ full_name: fullName, team: team || null })
-      .eq("id", profile.id)
-    setSaving(false)
-  }
 
   // ---- Tag handlers ----
   const handleAddTag = async () => {
@@ -217,41 +198,6 @@ export default function SettingsPage() {
     fetchData()
   }
 
-  const handleDeletePlaceholder = async (userId: string) => {
-    const supabase = createClient()
-    // Remove from use_case_members
-    await supabase
-      .from("ia_lab_use_case_members")
-      .delete()
-      .eq("profile_id", userId)
-    // Update use_cases where this user is owner (set to current user)
-    if (profile) {
-      await supabase
-        .from("ia_lab_use_cases")
-        .update({ owner_id: profile.id })
-        .eq("owner_id", userId)
-    }
-    await supabase.from("profiles").delete().eq("id", userId)
-    fetchData()
-  }
-
-  const handleAddPlaceholder = async () => {
-    if (!newPlaceholderName.trim()) return
-    const supabase = createClient()
-    const id = crypto.randomUUID()
-    await supabase.from("profiles").insert({
-      id,
-      full_name: newPlaceholderName.trim(),
-      email: `placeholder+${id.slice(0, 8)}@project-hub.local`,
-      role: "member",
-      is_placeholder: true,
-      team: newPlaceholderDept || null,
-    })
-    setNewPlaceholderName("")
-    setNewPlaceholderDept("")
-    fetchData()
-  }
-
   return (
     <div className="max-w-4xl space-y-6">
       <div>
@@ -297,8 +243,10 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Nom complet</Label>
                 <Input
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  value={profile?.full_name || ""}
+                  disabled
+                  readOnly
+                  className="bg-muted"
                 />
               </div>
               <div className="space-y-2">
@@ -306,15 +254,26 @@ export default function SettingsPage() {
                 <Input
                   value={profile?.email || ""}
                   disabled
+                  readOnly
                   className="bg-muted"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Équipe</Label>
                 <Input
-                  value={team}
-                  onChange={(e) => setTeam(e.target.value)}
-                  placeholder="Ex: Data & IA"
+                  value={profile?.team || ""}
+                  disabled
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>TJM (année en cours)</Label>
+                <Input
+                  value={profile ? (getEffectiveTjm(profile) ?? "—") : ""}
+                  disabled
+                  readOnly
+                  className="bg-muted"
                 />
               </div>
               <div className="space-y-2">
@@ -324,10 +283,14 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button onClick={handleSaveProfile} disabled={saving}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {saving ? "Enregistrement..." : "Enregistrer"}
-                </Button>
+                <a
+                  href="https://digi.stafftool.fr/profile"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-primary underline"
+                >
+                  Modifier mon profil dans Stafftool ↗
+                </a>
               </div>
             </CardContent>
           </Card>
@@ -520,37 +483,6 @@ export default function SettingsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Add placeholder user */}
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-xs">Nom</Label>
-                    <Input
-                      value={newPlaceholderName}
-                      onChange={(e) => setNewPlaceholderName(e.target.value)}
-                      placeholder="Nom du profil placeholder..."
-                      className="h-9"
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && handleAddPlaceholder()
-                      }
-                    />
-                  </div>
-                  <div className="w-40 space-y-1">
-                    <Label className="text-xs">Département</Label>
-                    <Input
-                      value={newPlaceholderDept}
-                      onChange={(e) => setNewPlaceholderDept(e.target.value)}
-                      placeholder="Département..."
-                      className="h-9"
-                    />
-                  </div>
-                  <Button size="sm" className="h-9" onClick={handleAddPlaceholder}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Ajouter
-                  </Button>
-                </div>
-
-                <Separator />
-
                 {/* Users table */}
                 <Table>
                   <TableHeader>
@@ -561,7 +493,6 @@ export default function SettingsPage() {
                       <TableHead>Équipe</TableHead>
                       <TableHead className="w-24">TJM (€/j)</TableHead>
                       <TableHead>Rôle</TableHead>
-                      <TableHead className="w-16">Type</TableHead>
                       <TableHead className="w-16 text-right">
                         Actions
                       </TableHead>
@@ -572,7 +503,7 @@ export default function SettingsPage() {
                       const initials =
                         p.full_name
                           ?.split(" ")
-                          .map((n) => n[0])
+                          .map((n: string) => n[0])
                           .join("")
                           .toUpperCase()
                           .slice(0, 2) || "?"
@@ -590,11 +521,7 @@ export default function SettingsPage() {
                             {p.full_name}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {p.is_placeholder ? (
-                              <span className="italic">placeholder</span>
-                            ) : (
-                              p.email
-                            )}
+                            {p.email}
                           </TableCell>
                           <TableCell>
                             <DepartmentEditor
@@ -605,25 +532,9 @@ export default function SettingsPage() {
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              min={0}
-                              step={50}
-                              value={getEffectiveTjm(p) ?? ""}
-                              onChange={async (e) => {
-                                const val = e.target.value
-                                  ? parseFloat(e.target.value)
-                                  : null
-                                const supabase = createClient()
-                                await supabase
-                                  .from("profiles")
-                                  .update({ tjm: val })
-                                  .eq("id", p.id)
-                                fetchData()
-                              }}
-                              placeholder="—"
-                              className="h-8 w-20 text-xs text-right"
-                            />
+                            <span className="text-sm text-muted-foreground">
+                              {getEffectiveTjm(p) ?? "—"}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <Select
@@ -649,59 +560,7 @@ export default function SettingsPage() {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] ${
-                                p.is_placeholder
-                                  ? "border-orange-300 text-orange-600"
-                                  : "border-green-300 text-green-600"
-                              }`}
-                            >
-                              {p.is_placeholder ? "Proxy" : "Réel"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {p.is_placeholder && (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Supprimer le profil &ldquo;
-                                      {p.full_name}&rdquo; ?
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Ce profil placeholder sera supprimé. Les
-                                      use cases dont il est responsable seront
-                                      réattribués à votre compte.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>
-                                      Annuler
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() =>
-                                        handleDeletePlaceholder(p.id)
-                                      }
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      Supprimer
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            )}
-                          </TableCell>
+                          <TableCell className="text-right" />
                         </TableRow>
                       )
                     })}
