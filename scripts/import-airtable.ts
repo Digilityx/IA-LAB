@@ -187,16 +187,19 @@ async function main() {
 
   console.log('\n[CONFIRM] Writing to ia_lab_use_cases...')
   for (const p of plans) {
-    const { error } = await supabase.from('ia_lab_use_cases').insert({
-      title: p.title,
-      description: p.description,
-      status: p.status,
-      category: p.category,
-      priority: p.priority,
-      owner_id: p.owner_id,
-    })
-    if (error && !error.message.includes('duplicate key')) {
-      console.error('INSERT failed:', p.title, '→', error.message)
+    const { error } = await supabase.from('ia_lab_use_cases').upsert(
+      {
+        title: p.title,
+        description: p.description,
+        status: p.status,
+        category: p.category,
+        priority: p.priority,
+        owner_id: p.owner_id,
+      },
+      { onConflict: 'title,category', ignoreDuplicates: true },
+    )
+    if (error) {
+      console.error('UPSERT failed:', p.title, '→', error.message)
     }
   }
   console.log('Done.')
