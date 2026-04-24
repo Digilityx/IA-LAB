@@ -41,6 +41,38 @@ export async function searchProfiles(query: string, limit = 20): Promise<Staffto
 }
 
 /**
+ * Lists all profiles from stafftool. Used for assignee/member pickers.
+ * High default limit (500) because the IA Lab assignee picker needs
+ * the full consultant roster, not just a paginated page.
+ */
+export async function listAllProfiles(opts: { limit?: number; orderBy?: 'full_name' } = {}): Promise<StafftoolProfile[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(PROFILE_COLUMNS)
+    .order(opts.orderBy ?? 'full_name', { ascending: true })
+    .limit(opts.limit ?? 500)
+  if (error) throw error
+  return (data ?? []) as StafftoolProfile[]
+}
+
+/**
+ * Lists profiles with a non-null TJM. Used by the UC gains panel to
+ * pick consultants with a billing rate configured.
+ */
+export async function listProfilesWithTjm(opts: { limit?: number } = {}): Promise<StafftoolProfile[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(PROFILE_COLUMNS)
+    .not('tjm', 'is', null)
+    .order('full_name', { ascending: true })
+    .limit(opts.limit ?? 500)
+  if (error) throw error
+  return (data ?? []) as StafftoolProfile[]
+}
+
+/**
  * Returns the effective TJM for a given year.
  * Falls back to the most recent prior year present, then returns null.
  */
