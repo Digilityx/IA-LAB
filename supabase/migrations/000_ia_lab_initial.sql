@@ -183,3 +183,141 @@ CREATE TABLE ia_lab_use_case_tags (
 );
 
 ALTER TABLE ia_lab_use_case_tags ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================================
+-- ia_lab_use_case_metrics (1:1 with UC)
+-- =========================================================================
+
+CREATE TABLE ia_lab_use_case_metrics (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  use_case_id         UUID REFERENCES ia_lab_use_cases(id) ON DELETE CASCADE UNIQUE,
+  margin_generated    NUMERIC,
+  man_days_estimated  NUMERIC,
+  man_days_actual     NUMERIC,
+  man_days_saved      NUMERIC GENERATED ALWAYS AS (man_days_estimated - man_days_actual) STORED,
+  mrr                 NUMERIC,
+  additional_business NUMERIC,
+  notes               TEXT,
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE ia_lab_use_case_metrics ENABLE ROW LEVEL SECURITY;
+
+CREATE TRIGGER ia_lab_use_case_metrics_updated_at
+  BEFORE UPDATE ON ia_lab_use_case_metrics
+  FOR EACH ROW EXECUTE FUNCTION ia_lab_update_updated_at();
+
+-- =========================================================================
+-- ia_lab_use_case_documents
+-- =========================================================================
+
+CREATE TABLE ia_lab_use_case_documents (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  use_case_id UUID REFERENCES ia_lab_use_cases(id) ON DELETE CASCADE NOT NULL,
+  file_name   TEXT NOT NULL,
+  file_url    TEXT NOT NULL,
+  file_size   BIGINT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE ia_lab_use_case_documents ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================================
+-- ia_lab_sprint_use_cases + assignments (multi-assignee)
+-- =========================================================================
+
+CREATE TABLE ia_lab_sprint_use_cases (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sprint_id       UUID REFERENCES ia_lab_sprints(id) ON DELETE CASCADE NOT NULL,
+  use_case_id     UUID REFERENCES ia_lab_use_cases(id) ON DELETE CASCADE NOT NULL,
+  estimated_days  NUMERIC,
+  assigned_to     UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (sprint_id, use_case_id)
+);
+
+ALTER TABLE ia_lab_sprint_use_cases ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE ia_lab_sprint_use_case_assignments (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sprint_use_case_id  UUID REFERENCES ia_lab_sprint_use_cases(id) ON DELETE CASCADE NOT NULL,
+  profile_id          UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  estimated_days      NUMERIC,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (sprint_use_case_id, profile_id)
+);
+
+ALTER TABLE ia_lab_sprint_use_case_assignments ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================================
+-- ia_lab_uc_missions — UC delivery → mission attribution (rev/days/TJM snapshot)
+-- =========================================================================
+
+CREATE TABLE ia_lab_uc_missions (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  use_case_id    UUID REFERENCES ia_lab_use_cases(id) ON DELETE CASCADE NOT NULL,
+  category       ia_lab_use_case_category NOT NULL,
+  consultant_id  UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  mission_client TEXT,
+  days_saved     NUMERIC,
+  mission_amount NUMERIC,
+  tjm_snapshot   NUMERIC,
+  notes          TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by     UUID REFERENCES profiles(id) ON DELETE SET NULL
+);
+
+ALTER TABLE ia_lab_uc_missions ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================================
+-- ia_lab_uc_deals — client deals tied to UCs
+-- =========================================================================
+
+CREATE TABLE ia_lab_uc_deals (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  use_case_id UUID REFERENCES ia_lab_use_cases(id) ON DELETE CASCADE NOT NULL,
+  client      TEXT NOT NULL,
+  amount      NUMERIC NOT NULL,
+  quote_date  DATE,
+  notes       TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by  UUID REFERENCES profiles(id) ON DELETE SET NULL
+);
+
+ALTER TABLE ia_lab_uc_deals ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================================
+-- ia_lab_uc_category_history — audit trail
+-- =========================================================================
+
+CREATE TABLE ia_lab_uc_category_history (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  use_case_id  UUID REFERENCES ia_lab_use_cases(id) ON DELETE CASCADE NOT NULL,
+  old_category ia_lab_use_case_category,
+  new_category ia_lab_use_case_category NOT NULL,
+  changed_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  changed_by   UUID REFERENCES profiles(id) ON DELETE SET NULL
+);
+
+ALTER TABLE ia_lab_uc_category_history ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================================
+-- ia_lab_interest_requests — gallery demand signals
+-- =========================================================================
+
+CREATE TABLE ia_lab_interest_requests (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  use_case_id  UUID REFERENCES ia_lab_use_cases(id) ON DELETE CASCADE NOT NULL,
+  requester_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  type         ia_lab_interest_type NOT NULL DEFAULT 'interested',
+  message      TEXT,
+  status       ia_lab_interest_status NOT NULL DEFAULT 'pending',
+  is_read      BOOLEAN NOT NULL DEFAULT false,
+  is_archived  BOOLEAN NOT NULL DEFAULT false,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_ia_lab_interest_requests_use_case  ON ia_lab_interest_requests(use_case_id);
+CREATE INDEX idx_ia_lab_interest_requests_requester ON ia_lab_interest_requests(requester_id);
+
+ALTER TABLE ia_lab_interest_requests ENABLE ROW LEVEL SECURITY;
