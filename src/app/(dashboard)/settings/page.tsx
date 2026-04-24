@@ -54,8 +54,14 @@ import {
   Settings,
   Eye,
 } from "lucide-react"
-import type { Profile, Tag as TagType, UserRole } from "@/types/database"
+import type { Profile, Tag as TagType } from "@/types/database"
 import { getEffectiveTjm } from "@/lib/stafftool/profiles"
+import { isIaLabAdmin } from "@/lib/ia-lab-roles"
+
+// Profiles fetched from the DB may still carry is_placeholder; we keep a
+// local extension so we don't lose that display capability while the
+// placeholder feature is migrated to the new schema.
+type ProfileRow = Profile & { is_placeholder?: boolean }
 
 const TAG_COLORS = [
   "#ef4444",
@@ -92,7 +98,7 @@ const categoryConfig = [
 
 export default function SettingsPage() {
   // Profile state
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profile, setProfile] = useState<ProfileRow | null>(null)
   const [fullName, setFullName] = useState("")
   const [team, setTeam] = useState("")
   const [saving, setSaving] = useState(false)
@@ -107,7 +113,7 @@ export default function SettingsPage() {
   const [editingTagColor, setEditingTagColor] = useState("")
 
   // Users state
-  const [allProfiles, setAllProfiles] = useState<Profile[]>([])
+  const [allProfiles, setAllProfiles] = useState<ProfileRow[]>([])
 
   // Placeholder creation
   const [newPlaceholderName, setNewPlaceholderName] = useState("")
@@ -133,7 +139,7 @@ export default function SettingsPage() {
       setProfile(profileRes.data)
       setFullName(profileRes.data.full_name)
       setTeam(profileRes.data.team || "")
-      setIsAdmin(profileRes.data.role === "admin")
+      isIaLabAdmin().then(setIsAdmin)
     }
     if (tagsRes.data) setTags(tagsRes.data)
     if (profilesRes.data) setAllProfiles(profilesRes.data)
@@ -193,7 +199,7 @@ export default function SettingsPage() {
   }
 
   // ---- User handlers ----
-  const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
+  const handleUpdateUserRole = async (userId: string, newRole: string) => {
     const supabase = createClient()
     await supabase.from("profiles").update({ role: newRole }).eq("id", userId)
     fetchData()
@@ -623,10 +629,7 @@ export default function SettingsPage() {
                             <Select
                               value={p.role}
                               onValueChange={(v) =>
-                                handleUpdateUserRole(
-                                  p.id,
-                                  v as UserRole
-                                )
+                                handleUpdateUserRole(p.id, v)
                               }
                               disabled={p.id === profile?.id}
                             >
