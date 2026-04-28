@@ -16,7 +16,20 @@ Guidance for Claude Code when working in this repo. See `SPECS.md` for the produ
 - **@dnd-kit** for Kanban drag-drop
 - **Zod 4**, **Recharts**, **Sonner** (toasts), **date-fns**, **react-markdown**
 
-No `vercel.json` / `vercel.ts` yet. `next.config.ts` is empty.
+No `vercel.json` / `vercel.ts`. `next.config.ts` is empty.
+
+## Deployment
+
+Live at **https://ia-lab-five.vercel.app** (personal Vercel scope `enzos-projects-32aade38/ia-lab` — temporary; transferring to Digilityx team once GitHub auto-connect permission is granted).
+
+**Auto-deploy is NOT wired up yet** — the Vercel project isn't connected to the GitHub repo. Every prod release is manual:
+
+```bash
+git pull origin main
+vercel --prod
+```
+
+Pushing to `main` does NOT trigger a deploy on its own.
 
 ## Scripts
 
@@ -90,8 +103,9 @@ Statuses, categories, priorities, roles are enforced as PG enums. Adding a value
 - `react-hooks/set-state-in-effect` is **off** project-wide — client-side Supabase fetches in `useEffect` are the established pattern here. Don't reintroduce the rule.
 
 ### Data imports
-- `scripts/import-airtable.ts` reads the five `BDD UCs livrés Airtable - *.csv` files at repo root. Keep them UTF-8 — migration 006 exists specifically to undo mojibake from a past bad import.
-- **Always run with `--dry-run` first**, then `--confirm` to apply.
+- **Initial data was imported from `ialab_dump.sql`** (the previous dev's full DB export, committed at repo root) via `scripts/transform-dump.ts` → `.transformed_dump.sql` → Supabase SQL editor. Re-running is idempotent (`ON CONFLICT DO NOTHING`) but rarely needed.
+- **CSV import (`scripts/import-airtable.ts`)** reads the five `BDD UCs livrés Airtable - *.csv` files at repo root. Always `--dry-run` first, then `--confirm`. Caveat: with the anon key alone, RLS rejects writes — script needs an authenticated admin context (or service-role key passed via env) to insert.
+- Keep CSV files UTF-8.
 
 ---
 
@@ -109,10 +123,10 @@ Implementation order is spelled out at the bottom of `PLAN.md` — follow it unl
 ## When touching this project
 
 - **Before writing code in a feature area, read `PLAN.md`** — some of it is already done (shadcn `table`/`alert-dialog` installed, `list-view.tsx` exists, detail is a Dialog not a Sheet). Check file state before following the plan blindly.
-- **Never edit old migrations.** Add a new one (`011_*.sql` etc.).
+- **Never edit `000_ia_lab_initial.sql`** — it has been applied to prod. Add new migrations as `011_ia_lab_*.sql`, `012_ia_lab_*.sql`, etc.
 - **Prefer editing existing files.** This repo has an established structure — don't add new top-level folders without a reason.
 - **No tests exist yet.** Don't fabricate a test suite — if tests become relevant, ask first.
-- **Don't push to `main`.** Open a PR for anything non-trivial.
+- **Manual deploy.** Currently no auto-deploy from `main` (see Deployment section). After merging changes, run `vercel --prod` to release.
 - **French UI, English code.** Keep the separation.
 
 ## Data
