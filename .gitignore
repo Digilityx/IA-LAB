@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+node_modules
+
+# Local DB dumps and transforms (never commit data)
+.dump_temp.sql
+.transformed_dump.sql
+ialab_dump.sql
