@@ -35,16 +35,16 @@ export default function GalleryPage() {
     const supabase = createClient()
     const [ucRes, tagsRes] = await Promise.all([
       supabase
-        .from("use_cases")
+        .from("ia_lab_use_cases")
         .select(`
           *,
-          owner:profiles!use_cases_owner_id_fkey(*),
-          tags:use_case_tags(tag:tags(*)),
-          interest_requests(count)
+          owner:profiles!ia_lab_use_cases_owner_id_fkey(*),
+          tags:ia_lab_use_case_tags(tag:ia_lab_tags(*)),
+          ia_lab_interest_requests(count)
         `)
         .eq("is_published", true)
         .order("updated_at", { ascending: false }),
-      supabase.from("tags").select("*").order("name"),
+      supabase.from("ia_lab_tags").select("*").order("name"),
     ])
 
     if (ucRes.data) {
@@ -52,7 +52,7 @@ export default function GalleryPage() {
         ...uc,
         tags: uc.tags?.map((t: { tag: unknown }) => t.tag).filter(Boolean) || [],
         interest_count:
-          (uc.interest_requests as unknown as { count: number }[])?.[0]?.count || 0,
+          (uc.ia_lab_interest_requests as unknown as { count: number }[])?.[0]?.count || 0,
       }))
       setUseCases(transformed as (UseCase & { interest_count: number })[])
     }

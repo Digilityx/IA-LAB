@@ -48,7 +48,7 @@ export function AddUseCaseToSprint({
       setLoading(true)
       const supabase = createClient()
       const { data } = await supabase
-        .from("use_cases")
+        .from("ia_lab_use_cases")
         .select("id, title, category, status")
         .order("title")
 
@@ -66,7 +66,7 @@ export function AddUseCaseToSprint({
 
   const handleSelect = async (useCaseId: string) => {
     const supabase = createClient()
-    const { error } = await supabase.from("sprint_use_cases").insert({
+    const { error } = await supabase.from("ia_lab_sprint_use_cases").insert({
       sprint_id: sprintId,
       use_case_id: useCaseId,
     })

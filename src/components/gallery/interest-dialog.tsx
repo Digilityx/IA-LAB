@@ -67,7 +67,7 @@ export function InterestDialog({ useCaseId, onSubmitted }: InterestDialogProps) 
     } = await supabase.auth.getUser()
     if (!user) return
 
-    await supabase.from("interest_requests").insert({
+    await supabase.from("ia_lab_interest_requests").insert({
       use_case_id: useCaseId,
       requester_id: user.id,
       type: selectedType,

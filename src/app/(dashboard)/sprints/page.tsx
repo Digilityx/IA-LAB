@@ -79,15 +79,15 @@ export default function SprintsPage() {
     const supabase = createClient()
     const [sprintsRes, sucRes] = await Promise.all([
       supabase
-        .from("sprints")
+        .from("ia_lab_sprints")
         .select("*")
         .order("start_date", { ascending: false }),
       supabase
-        .from("sprint_use_cases")
+        .from("ia_lab_sprint_use_cases")
         .select(
           `sprint_id,
-          assignments:sprint_use_case_assignments(estimated_days),
-          use_case:use_cases(status)`
+          assignments:ia_lab_sprint_use_case_assignments(estimated_days),
+          use_case:ia_lab_use_cases(status)`
         ),
     ])
 
@@ -153,7 +153,7 @@ export default function SprintsPage() {
     } = await supabase.auth.getUser()
     if (!user) return
 
-    const { error } = await supabase.from("sprints").insert({
+    const { error } = await supabase.from("ia_lab_sprints").insert({
       name: name || `${MONTHS[monthIndex]} ${year}`,
       start_date: formatDate(startDate),
       end_date: formatDate(endDate),

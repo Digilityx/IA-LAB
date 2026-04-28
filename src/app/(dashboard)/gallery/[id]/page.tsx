@@ -53,14 +53,14 @@ export default function GalleryDetailPage() {
 
     const [ucRes, metricsRes, interestsRes] = await Promise.all([
       supabase
-        .from("use_cases")
-        .select("*, owner:profiles!use_cases_owner_id_fkey(*), tags:use_case_tags(tag:tags(*))")
+        .from("ia_lab_use_cases")
+        .select("*, owner:profiles!ia_lab_use_cases_owner_id_fkey(*), tags:ia_lab_use_case_tags(tag:ia_lab_tags(*))")
         .eq("id", id)
         .single(),
-      supabase.from("use_case_metrics").select("*").eq("use_case_id", id).maybeSingle(),
+      supabase.from("ia_lab_use_case_metrics").select("*").eq("use_case_id", id).maybeSingle(),
       supabase
-        .from("interest_requests")
-        .select("*, requester:profiles!interest_requests_requester_id_fkey(*)")
+        .from("ia_lab_interest_requests")
+        .select("*, requester:profiles!ia_lab_interest_requests_requester_id_fkey(*)")
         .eq("use_case_id", id)
         .order("created_at", { ascending: false }),
     ])

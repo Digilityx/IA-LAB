@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project Hub — IA LAB
 
-## Getting Started
+Internal Digilityx app for tracking IA Lab use cases through a Kanban pipeline, sprints, metrics, and a published gallery. Shares its Supabase backend with [stafftool](https://github.com/Digilityx/stafftool).
 
-First, run the development server:
+See [`docs/superpowers/specs/2026-04-24-stafftool-merge-design.md`](docs/superpowers/specs/2026-04-24-stafftool-merge-design.md) for the architecture.
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env.local
+# Fill in NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (stafftool prod credentials)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Important
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Single environment (prod).** All work — local dev, PR previews, production — points at stafftool's prod Supabase. There is no dev/staging DB.
+- **Test data convention:** prefix temporary UC titles with `[DEV]` so they're easy to identify and clean up.
+- **Never write to stafftool-owned tables.** CI guard enforces this; RLS is the backstop. Use `src/lib/stafftool/*` for any read.
+- **Schema changes** are applied manually via Supabase CLI or SQL editor. Vercel deploys code only.
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run dev                # Dev server
+npm run build              # Production build
+npm run lint               # ESLint
+npm run import:airtable    # Import Airtable CSVs — ALWAYS use --dry-run first:
+                           # npx tsx scripts/import-airtable.ts --dry-run
+                           # npx tsx scripts/import-airtable.ts --confirm
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Deployed on Vercel from `main`. Preview deploys are auto-generated per PR (they also use prod credentials — see "Single environment" above).
 
-## Deploy on Vercel
+Env vars set in Vercel dashboard:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Related docs
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `CLAUDE.md` — conventions for AI-assisted work in this repo
+- `SPECS.md` — product spec
+- `PLAN.md` — pending UI features (post-merge)
+- `docs/superpowers/specs/` — design specs
+- `docs/superpowers/plans/` — implementation plans

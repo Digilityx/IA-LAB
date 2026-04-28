@@ -52,10 +52,11 @@ import type {
   Sprint,
   SprintUseCase,
   SprintUseCaseAssignment,
-  Profile,
   SprintStatus,
   UseCaseStatus,
 } from "@/types/database"
+import { listAllProfiles } from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 import { SPRINT_BUDGET_DAYS } from "@/types/database"
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -100,7 +101,7 @@ export default function SprintDetailPage() {
   const [sprint, setSprint] = useState<Sprint | null>(null)
   const [sprintUseCases, setSprintUseCases] = useState<SprintUseCase[]>([])
   const [originalSucs, setOriginalSucs] = useState<SprintUseCase[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [profiles, setProfiles] = useState<StafftoolProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -116,16 +117,16 @@ export default function SprintDetailPage() {
 
   const fetchData = useCallback(async () => {
     const supabase = createClient()
-    const [sprintRes, sucRes, profilesRes] = await Promise.all([
-      supabase.from("sprints").select("*").eq("id", id).single(),
+    const [sprintRes, sucRes, allProfiles] = await Promise.all([
+      supabase.from("ia_lab_sprints").select("*").eq("id", id).single(),
       supabase
-        .from("sprint_use_cases")
+        .from("ia_lab_sprint_use_cases")
         .select(
-          "*, use_case:use_cases(*, owner:profiles!use_cases_owner_id_fkey(*)), assignments:sprint_use_case_assignments(*, profile:profiles(*))"
+          "*, use_case:ia_lab_use_cases(*, owner:profiles!ia_lab_use_cases_owner_id_fkey(*)), assignments:ia_lab_sprint_use_case_assignments(*, profile:profiles(*))"
         )
         .eq("sprint_id", id)
         .order("created_at"),
-      supabase.from("profiles").select("*").order("full_name"),
+      listAllProfiles(),
     ])
     if (sprintRes.data) setSprint(sprintRes.data)
     if (sucRes.data) {
@@ -140,7 +141,7 @@ export default function SprintDetailPage() {
       setOriginalSucs(JSON.parse(JSON.stringify(data)))
       setDirty(false)
     }
-    if (profilesRes.data) setProfiles(profilesRes.data as Profile[])
+    setProfiles(allProfiles)
     setLoading(false)
   }, [id])
 
@@ -150,7 +151,7 @@ export default function SprintDetailPage() {
 
   const handleStatusChange = async (newStatus: SprintStatus) => {
     const supabase = createClient()
-    const { error } = await supabase.from("sprints").update({ status: newStatus }).eq("id", id)
+    const { error } = await supabase.from("ia_lab_sprints").update({ status: newStatus }).eq("id", id)
     if (error) toast.error("Erreur lors du changement de statut")
     else toast.success("Statut du sprint mis à jour")
     fetchData()
@@ -178,7 +179,7 @@ export default function SprintDetailPage() {
 
     const supabase = createClient()
     const { error } = await supabase
-      .from("sprints")
+      .from("ia_lab_sprints")
       .update({
         name: editName.trim(),
         start_date: formatDate(startDate),
@@ -197,7 +198,7 @@ export default function SprintDetailPage() {
   const handleDelete = async () => {
     setDeleting(true)
     const supabase = createClient()
-    const { error } = await supabase.from("sprints").delete().eq("id", id)
+    const { error } = await supabase.from("ia_lab_sprints").delete().eq("id", id)
     setDeleting(false)
     setDeleteOpen(false)
     if (error) {
@@ -284,7 +285,7 @@ export default function SprintDetailPage() {
         if (!currPersistedIds.has(orig.id)) {
           ops.push(
             supabase
-              .from("sprint_use_case_assignments")
+              .from("ia_lab_sprint_use_case_assignments")
               .delete()
               .eq("id", orig.id)
           )
@@ -296,7 +297,7 @@ export default function SprintDetailPage() {
         if (!a.profile_id) continue // skip un-picked rows
         if (a.id.startsWith("new-")) {
           ops.push(
-            supabase.from("sprint_use_case_assignments").insert({
+            supabase.from("ia_lab_sprint_use_case_assignments").insert({
               sprint_use_case_id: suc.id,
               profile_id: a.profile_id,
               estimated_days: a.estimated_days,
@@ -311,7 +312,7 @@ export default function SprintDetailPage() {
           ) {
             ops.push(
               supabase
-                .from("sprint_use_case_assignments")
+                .from("ia_lab_sprint_use_case_assignments")
                 .update({
                   profile_id: a.profile_id,
                   estimated_days: a.estimated_days,
@@ -334,7 +335,7 @@ export default function SprintDetailPage() {
   const handleUcStatusChange = async (useCaseId: string, newStatus: UseCaseStatus) => {
     const supabase = createClient()
     const { error } = await supabase
-      .from("use_cases")
+      .from("ia_lab_use_cases")
       .update({ status: newStatus })
       .eq("id", useCaseId)
     if (error) toast.error("Erreur lors du changement de statut")
@@ -344,7 +345,7 @@ export default function SprintDetailPage() {
 
   const handleRemove = async (sucId: string) => {
     const supabase = createClient()
-    const { error } = await supabase.from("sprint_use_cases").delete().eq("id", sucId)
+    const { error } = await supabase.from("ia_lab_sprint_use_cases").delete().eq("id", sucId)
     if (error) toast.error("Erreur lors du retrait")
     else toast.success("Use case retiré du sprint")
     fetchData()

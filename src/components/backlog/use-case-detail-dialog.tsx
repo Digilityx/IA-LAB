@@ -69,13 +69,14 @@ import type {
   UseCase,
   UseCaseMetrics,
   UseCaseDocument,
-  Profile,
   Tag,
   UseCaseCategory,
   UseCaseStatus,
   PriorityLevel,
   MemberRole,
 } from "@/types/database"
+import { listAllProfiles } from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 
 const statusLabels: Record<string, string> = {
   backlog: "Backlog",
@@ -101,7 +102,7 @@ interface UseCaseDetailDialogProps {
 interface MemberEntry {
   profile_id: string
   role: MemberRole
-  profile?: Profile
+  profile?: StafftoolProfile
 }
 
 export function UseCaseDetailDialog({
@@ -142,7 +143,7 @@ export function UseCaseDetailDialog({
   const [newTagColor, setNewTagColor] = useState("#6366f1")
 
   // Members
-  const [allProfiles, setAllProfiles] = useState<Profile[]>([])
+  const [allProfiles, setAllProfiles] = useState<StafftoolProfile[]>([])
   const [ownerId, setOwnerId] = useState<string>("")
   const [membersList, setMembersList] = useState<MemberEntry[]>([])
   const [addMemberProfileId, setAddMemberProfileId] = useState("")
@@ -179,35 +180,35 @@ export function UseCaseDetailDialog({
 
     const supabase = createClient()
 
-    const [ucRes, metricsRes, membersRes, tagsRes, profilesRes, docsRes] =
+    const [ucRes, metricsRes, membersRes, tagsRes, allProfilesData, docsRes] =
       await Promise.all([
         supabase
-          .from("use_cases")
+          .from("ia_lab_use_cases")
           .select(
-            `*, owner:profiles!use_cases_owner_id_fkey(*), sprint:sprints(*), tags:use_case_tags(tag:tags(*))`
+            `*, owner:profiles!ia_lab_use_cases_owner_id_fkey(*), sprint:ia_lab_sprints(*), tags:ia_lab_use_case_tags(tag:ia_lab_tags(*))`
           )
           .eq("id", useCaseId)
           .single(),
         supabase
-          .from("use_case_metrics")
+          .from("ia_lab_use_case_metrics")
           .select("*")
           .eq("use_case_id", useCaseId)
           .maybeSingle(),
         supabase
-          .from("use_case_members")
+          .from("ia_lab_use_case_members")
           .select("*, profile:profiles(*)")
           .eq("use_case_id", useCaseId),
-        supabase.from("tags").select("*").order("name"),
-        supabase.from("profiles").select("*").order("full_name"),
+        supabase.from("ia_lab_tags").select("*").order("name"),
+        listAllProfiles(),
         supabase
-          .from("use_case_documents")
+          .from("ia_lab_use_case_documents")
           .select("*")
           .eq("use_case_id", useCaseId)
           .order("created_at", { ascending: false }),
       ])
 
     if (tagsRes.data) setAllTags(tagsRes.data)
-    if (profilesRes.data) setAllProfiles(profilesRes.data)
+    setAllProfiles(allProfilesData)
 
     if (ucRes.data) {
       const uc = {
@@ -218,7 +219,7 @@ export function UseCaseDetailDialog({
             .filter(Boolean) || [],
       } as UseCase
       setUseCase(uc)
-      setOwnerId(uc.owner_id)
+      setOwnerId(uc.owner_id ?? "")
       setTitle(uc.title)
       setDescription(uc.description)
       setDocumentation(uc.documentation || "")
@@ -267,7 +268,7 @@ export function UseCaseDetailDialog({
         .map((m) => ({
           profile_id: m.profile_id,
           role: m.role as MemberRole,
-          profile: m.profile as Profile,
+          profile: m.profile as StafftoolProfile,
         }))
       setMembersList(entries)
       setOriginalMembers(entries.map((e) => ({ ...e })))
@@ -308,7 +309,7 @@ export function UseCaseDetailDialog({
     setCreatingTag(true)
     const supabase = createClient()
     const { data } = await supabase
-      .from("tags")
+      .from("ia_lab_tags")
       .insert({ name: newTagName.trim(), color: newTagColor })
       .select()
       .single()
@@ -394,7 +395,7 @@ export function UseCaseDetailDialog({
       status,
       category,
       priority,
-      owner_id: ownerId,
+      owner_id: ownerId || null,
     }
     const newFieldValue = (val: string) =>
       val && val !== "none" ? val : null
@@ -414,7 +415,7 @@ export function UseCaseDetailDialog({
     if (transferStatus || useCase?.transfer_status)
       updateData.transfer_status = transferStatus && transferStatus !== "none" ? transferStatus : null
 
-    await supabase.from("use_cases").update(updateData).eq("id", useCaseId)
+    await supabase.from("ia_lab_use_cases").update(updateData).eq("id", useCaseId)
 
     // 2. Sync tags
     const tagsToRemove = originalTagIds.filter(
@@ -426,13 +427,13 @@ export function UseCaseDetailDialog({
 
     if (tagsToRemove.length > 0) {
       await supabase
-        .from("use_case_tags")
+        .from("ia_lab_use_case_tags")
         .delete()
         .eq("use_case_id", useCaseId)
         .in("tag_id", tagsToRemove)
     }
     if (tagsToAdd.length > 0) {
-      await supabase.from("use_case_tags").insert(
+      await supabase.from("ia_lab_use_case_tags").insert(
         tagsToAdd.map((tag_id) => ({
           use_case_id: useCaseId,
           tag_id,
@@ -456,13 +457,13 @@ export function UseCaseDetailDialog({
 
     if (membersToRemove.length > 0) {
       await supabase
-        .from("use_case_members")
+        .from("ia_lab_use_case_members")
         .delete()
         .eq("use_case_id", useCaseId)
         .in("profile_id", membersToRemove)
     }
     if (membersToUpsert.length > 0) {
-      await supabase.from("use_case_members").upsert(
+      await supabase.from("ia_lab_use_case_members").upsert(
         membersToUpsert.map((m) => ({
           use_case_id: useCaseId,
           profile_id: m.profile_id,
@@ -489,7 +490,7 @@ export function UseCaseDetailDialog({
 
     if (metrics) {
       await supabase
-        .from("use_case_metrics")
+        .from("ia_lab_use_case_metrics")
         .update(metricsData)
         .eq("id", metrics.id)
     } else {
@@ -501,7 +502,7 @@ export function UseCaseDetailDialog({
         additionalBusiness ||
         metricsNotes
       if (hasAnyMetric) {
-        await supabase.from("use_case_metrics").insert(metricsData)
+        await supabase.from("ia_lab_use_case_metrics").insert(metricsData)
       }
     }
 
@@ -517,7 +518,7 @@ export function UseCaseDetailDialog({
           data: { publicUrl },
         } = supabase.storage.from("documents").getPublicUrl(filePath)
 
-        await supabase.from("use_case_documents").insert({
+        await supabase.from("ia_lab_use_case_documents").insert({
           use_case_id: useCaseId,
           file_name: file.name,
           file_url: publicUrl,
@@ -537,7 +538,7 @@ export function UseCaseDetailDialog({
             .from("documents")
             .remove([decodeURIComponent(urlParts[1])])
         }
-        await supabase.from("use_case_documents").delete().eq("id", docId)
+        await supabase.from("ia_lab_use_case_documents").delete().eq("id", docId)
       }
     }
 
@@ -554,26 +555,26 @@ export function UseCaseDetailDialog({
     const supabase = createClient()
 
     await Promise.all([
-      supabase.from("use_case_tags").delete().eq("use_case_id", useCaseId),
+      supabase.from("ia_lab_use_case_tags").delete().eq("use_case_id", useCaseId),
       supabase
-        .from("use_case_members")
+        .from("ia_lab_use_case_members")
         .delete()
         .eq("use_case_id", useCaseId),
       supabase
-        .from("use_case_metrics")
+        .from("ia_lab_use_case_metrics")
         .delete()
         .eq("use_case_id", useCaseId),
       supabase
-        .from("interest_requests")
+        .from("ia_lab_interest_requests")
         .delete()
         .eq("use_case_id", useCaseId),
       supabase
-        .from("use_case_documents")
+        .from("ia_lab_use_case_documents")
         .delete()
         .eq("use_case_id", useCaseId),
     ])
 
-    const { error } = await supabase.from("use_cases").delete().eq("id", useCaseId)
+    const { error } = await supabase.from("ia_lab_use_cases").delete().eq("id", useCaseId)
 
     if (error) toast.error("Erreur lors de la suppression")
     else toast.success("Use case supprimé")

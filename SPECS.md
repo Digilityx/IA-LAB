@@ -24,7 +24,7 @@ The product is French-facing (internal tool). Status/category/priority labels st
 | **member** | Create/update UCs, sprints, members, tags, metrics. Cannot delete UCs. |
 | **viewer** | Read-only. Uses the Gallery; can send interest requests. |
 
-RLS is enforced at the database level on every table — the UI enforces the same rules defensively. Placeholder profiles (`is_placeholder = true`) represent people referenced in UCs but without a real account; only admins can delete them.
+RLS is enforced at the database level on every table — the UI enforces the same rules defensively.
 
 ---
 
@@ -33,7 +33,7 @@ RLS is enforced at the database level on every table — the UI enforces the sam
 ### 3.1 Authentication
 - Supabase email/password + OAuth via `@supabase/ssr`.
 - Session middleware (`src/middleware.ts` → `updateSession`).
-- Auto-create `profiles` row on signup (PG trigger `handle_new_user`).
+- User identity is managed by stafftool — `profiles` rows are created by stafftool's `handle_new_user` trigger when a user signs up through either app.
 - Password reset flow at `/auth/reset-password`.
 
 ### 3.2 Backlog (Kanban + Liste)
@@ -70,7 +70,7 @@ RLS is enforced at the database level on every table — the UI enforces the sam
 ### 3.6 Settings (refonte planifiée — 4 onglets)
 1. **Profil** — name, email, department, role.
 2. **Tags** — inline-editable table (name, color picker). AlertDialog on delete (removes from all UCs).
-3. **Utilisateurs** — table with role/department inline-editable. Delete only for `is_placeholder=true`. Button to create placeholder profiles.
+3. **Utilisateurs** — table with role/department inline-editable.
 4. **Configuration** — read-only reference for PG enums (statuses, categories, priorities, colors). Adding values requires a new SQL migration.
 
 ### 3.7 Airtable import
@@ -84,7 +84,7 @@ RLS is enforced at the database level on every table — the UI enforces the sam
 ### Core entities
 | Table | Purpose | Key fields |
 |---|---|---|
-| `profiles` | Extends `auth.users` | `role`, `department`, `tjm`, `is_placeholder` |
+| `profiles` | Extends `auth.users` (stafftool-owned) | `role`, `team`, `tjm` |
 | `sprints` | Delivery sprints | `start_date`, `end_date`, `status` |
 | `use_cases` | Central entity | `status`, `category`, `priority`, `sprint_id`, `owner_id`, `is_published`, `documentation`, `cover_image_url`, `deliverable_type`, `usage_type`, `tools`, `target_users`, `benchmark_url`, `journey_url`, `next_steps`, `transfer_status` |
 | `use_case_members` | Team per UC | `role` (owner / contributor / reviewer) |
@@ -108,7 +108,7 @@ RLS is enforced at the database level on every table — the UI enforces the sam
 - `interest_status` — `pending` / `contacted` / `resolved`
 
 ### Triggers
-- `handle_new_user` — auto-create `profiles` row on `auth.users` insert.
+- `handle_new_user` — stafftool-owned trigger that auto-creates a `profiles` row on `auth.users` insert (used by both apps).
 - `update_updated_at` — bumps `updated_at` on `use_cases` and `use_case_metrics`.
 
 ---
@@ -156,4 +156,3 @@ RLS is enforced at the database level on every table — the UI enforces the sam
 - **Sprint** — 23-day delivery window.
 - **IMPACT / LAB / PRODUCT** — the three UC categories driving how a UC is tracked (client revenue / internal R&D / productized asset).
 - **TJM** — Taux Journalier Moyen (daily billing rate).
-- **Placeholder** — profile row for someone referenced in a UC but without a real auth account.

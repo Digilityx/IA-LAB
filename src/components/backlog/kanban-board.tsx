@@ -58,7 +58,7 @@ export function KanbanBoard({ useCases, onUpdate, onSelectUseCase, displayPrefs 
       if (currentUseCase && currentUseCase.status !== newStatus) {
         const supabase = createClient()
         const { error } = await supabase
-          .from("use_cases")
+          .from("ia_lab_use_cases")
           .update({ status: newStatus })
           .eq("id", useCaseId)
         if (error) toast.error("Erreur lors du changement de statut")

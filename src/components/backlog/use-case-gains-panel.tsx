@@ -17,12 +17,13 @@ import {
 import { Plus, Trash2, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 import type {
-  Profile,
   UcMission,
   UcDeal,
   UcCategoryHistoryEntry,
   UseCaseCategory,
 } from "@/types/database"
+import { getEffectiveTjm, listProfilesWithTjm } from "@/lib/stafftool/profiles"
+import type { StafftoolProfile } from "@/lib/stafftool/types"
 
 interface Props {
   useCaseId: string
@@ -55,36 +56,32 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
   const [missions, setMissions] = useState<UcMission[]>([])
   const [deals, setDeals] = useState<UcDeal[]>([])
   const [history, setHistory] = useState<UcCategoryHistoryEntry[]>([])
-  const [consultants, setConsultants] = useState<Profile[]>([])
+  const [consultants, setConsultants] = useState<StafftoolProfile[]>([])
 
   const fetchAll = useCallback(async () => {
     const supabase = createClient()
-    const [mRes, dRes, hRes, cRes] = await Promise.all([
+    const [mRes, dRes, hRes, consultantsData] = await Promise.all([
       supabase
-        .from("uc_missions")
+        .from("ia_lab_uc_missions")
         .select("*, consultant:profiles(*)")
         .eq("use_case_id", useCaseId)
         .order("created_at"),
       supabase
-        .from("uc_deals")
+        .from("ia_lab_uc_deals")
         .select("*")
         .eq("use_case_id", useCaseId)
         .order("created_at"),
       supabase
-        .from("uc_category_history")
-        .select("*, changed_by_profile:profiles!uc_category_history_changed_by_fkey(*)")
+        .from("ia_lab_uc_category_history")
+        .select("*, changed_by_profile:profiles!ia_lab_uc_category_history_changed_by_fkey(*)")
         .eq("use_case_id", useCaseId)
         .order("changed_at"),
-      supabase
-        .from("profiles")
-        .select("*")
-        .not("tjm", "is", null)
-        .order("full_name"),
+      listProfilesWithTjm(),
     ])
     if (mRes.data) setMissions(mRes.data as UcMission[])
     if (dRes.data) setDeals(dRes.data as UcDeal[])
     if (hRes.data) setHistory(hRes.data as UcCategoryHistoryEntry[])
-    if (cRes.data) setConsultants(cRes.data as Profile[])
+    setConsultants(consultantsData)
     setLoading(false)
   }, [useCaseId])
 
@@ -97,7 +94,7 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
   const addMission = async (category: "IMPACT" | "LAB") => {
     const supabase = createClient()
     const { data, error } = await supabase
-      .from("uc_missions")
+      .from("ia_lab_uc_missions")
       .insert({ use_case_id: useCaseId, category })
       .select("*, consultant:profiles(*)")
       .single()
@@ -114,7 +111,7 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
     )
     const supabase = createClient()
     const { error } = await supabase
-      .from("uc_missions")
+      .from("ia_lab_uc_missions")
       .update(patch)
       .eq("id", id)
     if (error) toast.error("Erreur de sauvegarde")
@@ -125,12 +122,12 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
     if (!consultant) return
     await updateMission(id, {
       consultant_id: consultantId,
-      tjm_snapshot: consultant.tjm ?? null,
+      tjm_snapshot: getEffectiveTjm(consultant) ?? null,
     })
     // Refresh to pull joined consultant
     const supabase = createClient()
     const { data } = await supabase
-      .from("uc_missions")
+      .from("ia_lab_uc_missions")
       .select("*, consultant:profiles(*)")
       .eq("id", id)
       .single()
@@ -143,7 +140,7 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
 
   const deleteMission = async (id: string) => {
     const supabase = createClient()
-    const { error } = await supabase.from("uc_missions").delete().eq("id", id)
+    const { error } = await supabase.from("ia_lab_uc_missions").delete().eq("id", id)
     if (error) {
       toast.error("Erreur lors de la suppression")
       return
@@ -156,7 +153,7 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
   const addDeal = async () => {
     const supabase = createClient()
     const { data, error } = await supabase
-      .from("uc_deals")
+      .from("ia_lab_uc_deals")
       .insert({ use_case_id: useCaseId, client: "", amount: 0 })
       .select("*")
       .single()
@@ -170,13 +167,13 @@ export function UseCaseGainsPanel({ useCaseId }: Props) {
   const updateDeal = async (id: string, patch: Partial<UcDeal>) => {
     setDeals((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)))
     const supabase = createClient()
-    const { error } = await supabase.from("uc_deals").update(patch).eq("id", id)
+    const { error } = await supabase.from("ia_lab_uc_deals").update(patch).eq("id", id)
     if (error) toast.error("Erreur de sauvegarde")
   }
 
   const deleteDeal = async (id: string) => {
     const supabase = createClient()
-    const { error } = await supabase.from("uc_deals").delete().eq("id", id)
+    const { error } = await supabase.from("ia_lab_uc_deals").delete().eq("id", id)
     if (error) {
       toast.error("Erreur lors de la suppression")
       return
@@ -388,7 +385,7 @@ interface MissionSectionProps {
   subtitle: string
   category: "IMPACT" | "LAB"
   missions: UcMission[]
-  consultants: Profile[]
+  consultants: StafftoolProfile[]
   total: number
   showMissionAmount: boolean
   onAdd: () => void
@@ -443,7 +440,7 @@ function MissionSection({
                   <SelectContent>
                     {consultants.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.full_name} — {formatEUR(c.tjm ?? 0)}/j
+                        {c.full_name} — {formatEUR(getEffectiveTjm(c) ?? 0)}/j
                       </SelectItem>
                     ))}
                   </SelectContent>

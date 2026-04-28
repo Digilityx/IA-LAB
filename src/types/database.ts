@@ -1,4 +1,5 @@
-export type UserRole = 'admin' | 'member' | 'viewer'
+import type { TjmYearlyJsonb, CjmYearlyJsonb } from '@/lib/stafftool/types'
+
 export type SprintStatus = 'planned' | 'active' | 'completed'
 export type UseCaseStatus = 'backlog' | 'todo' | 'in_progress' | 'done' | 'abandoned'
 export type UseCaseCategory = 'IMPACT' | 'LAB' | 'PRODUCT'
@@ -13,11 +14,13 @@ export interface Profile {
   id: string
   full_name: string
   email: string
-  role: UserRole
   avatar_url: string | null
-  department: string | null
-  tjm: number | null
-  is_placeholder: boolean
+  team: string | null
+  tjm: TjmYearlyJsonb | null
+  cjm: CjmYearlyJsonb | null
+  arrival_date: string | null
+  departure_date: string | null
+  role: string  // stafftool user category (e.g. "consultant") — not a permission grant
   created_at: string
 }
 
@@ -39,7 +42,7 @@ export interface UseCase {
   category: UseCaseCategory
   priority: PriorityLevel
   sprint_id: string | null
-  owner_id: string
+  owner_id: string | null
   documentation: string | null
   is_published: boolean
   cover_image_url: string | null
@@ -143,7 +146,7 @@ export interface UseCaseAccompaniment {
 export interface UcMission {
   id: string
   use_case_id: string
-  category: 'IMPACT' | 'LAB'
+  category: UseCaseCategory
   consultant_id: string | null
   mission_client: string | null
   days_saved: number | null

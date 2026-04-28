@@ -68,12 +68,12 @@ export default function UseCaseDetailPage() {
     const supabase = createClient()
     const [ucRes, membersRes] = await Promise.all([
       supabase
-        .from("use_cases")
-        .select(`*, owner:profiles!use_cases_owner_id_fkey(*), sprint:sprints(*), tags:use_case_tags(tag:tags(*))`)
+        .from("ia_lab_use_cases")
+        .select(`*, owner:profiles!ia_lab_use_cases_owner_id_fkey(*), sprint:ia_lab_sprints(*), tags:ia_lab_use_case_tags(tag:ia_lab_tags(*))`)
         .eq("id", id)
         .single(),
       supabase
-        .from("use_case_members")
+        .from("ia_lab_use_case_members")
         .select("*, profile:profiles(*)")
         .eq("use_case_id", id),
     ])
@@ -133,7 +133,7 @@ export default function UseCaseDetailPage() {
     if (transferStatus || useCase?.transfer_status) updateData.transfer_status = transferStatus && transferStatus !== "none" ? transferStatus : null
 
     await supabase
-      .from("use_cases")
+      .from("ia_lab_use_cases")
       .update(updateData)
       .eq("id", id)
 

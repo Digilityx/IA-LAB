@@ -1,0 +1,35 @@
+# .github/workflows/guard-stafftool-tables.yml
+# Fails the build if any .ts/.tsx file outside src/lib/stafftool/ accesses stafftool-owned tables.
+# This enforces the read-only wrapper convention documented in the merge spec § 5.4.
+name: Guard stafftool tables
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Grep for stafftool table access outside wrapper
+        shell: bash
+        run: |
+          set -e
+          FORBIDDEN_TABLES='profiles|missions|clients|cras|user_roles|mission_consultants|mission_expertises|mission_feedbacks|expenses|expertises|ressources|revenue_targets|consultants_targets|absences|teams'
+          OFFENDERS=$(grep -rEn --include="*.ts" --include="*.tsx" \
+            --exclude-dir=node_modules \
+            --exclude-dir=.next \
+            --exclude-dir=stafftool \
+            "\.from\(['\"](\\b($FORBIDDEN_TABLES)\\b)['\"]" \
+            src/ || true)
+
+          if [ -n "$OFFENDERS" ]; then
+            echo "❌ Direct stafftool table access found outside src/lib/stafftool/:"
+            echo "$OFFENDERS"
+            echo ""
+            echo "Go through src/lib/stafftool/* instead. See docs/superpowers/specs/2026-04-24-stafftool-merge-design.md § 5.4."
+            exit 1
+          fi
+          echo "✅ No direct stafftool table access outside the wrapper."

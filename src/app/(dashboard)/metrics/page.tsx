@@ -81,7 +81,7 @@ export default function MetricsPage() {
     const fetchInitial = async () => {
       const supabase = createClient()
       const { data } = await supabase
-        .from("sprints")
+        .from("ia_lab_sprints")
         .select("*")
         .order("start_date", { ascending: false })
       if (data) {
@@ -122,9 +122,9 @@ export default function MetricsPage() {
 
     // 1. Fetch sprint_use_cases (to filter UCs by sprint/year and get IA team days)
     let sucQuery = supabase
-      .from("sprint_use_cases")
+      .from("ia_lab_sprint_use_cases")
       .select(
-        "use_case_id, use_case:use_cases(id, title, category), assignments:sprint_use_case_assignments(estimated_days)"
+        "use_case_id, use_case:ia_lab_use_cases(id, title, category), assignments:ia_lab_sprint_use_case_assignments(estimated_days)"
       )
     if (selectedSprintId !== "all") {
       sucQuery = sucQuery.eq("sprint_id", selectedSprintId)
@@ -171,8 +171,8 @@ export default function MetricsPage() {
 
     // 2. Fetch missions and deals for these UCs
     const [missionsRes, dealsRes] = await Promise.all([
-      supabase.from("uc_missions").select("*").in("use_case_id", ucIds),
-      supabase.from("uc_deals").select("*").in("use_case_id", ucIds),
+      supabase.from("ia_lab_uc_missions").select("*").in("use_case_id", ucIds),
+      supabase.from("ia_lab_uc_deals").select("*").in("use_case_id", ucIds),
     ])
 
     const missionsByUc = new Map<string, UcMission[]>()
