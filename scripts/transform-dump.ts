@@ -54,6 +54,64 @@ const REQUIRED_PROFILE_FK_TABLES = new Set([
   'public.sprint_use_case_assignments',
 ])
 
+// Generated columns in our ia_lab_* schema — strip from incoming INSERTs since
+// Postgres rejects writes to generated columns.
+const GENERATED_COLUMNS_BY_TABLE: Record<string, string[]> = {
+  'public.ia_lab_use_case_metrics': ['man_days_saved'],
+}
+
+function parseValuesList(s: string): string[] {
+  // Splits a Postgres VALUES inner list on top-level commas, respecting single-quoted
+  // strings (with '' as escape).
+  const out: string[] = []
+  let buf = ''
+  let inQuote = false
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (c === "'") {
+      if (inQuote && s[i + 1] === "'") {
+        buf += "''"
+        i++
+        continue
+      }
+      inQuote = !inQuote
+      buf += c
+    } else if (c === ',' && !inQuote) {
+      out.push(buf.trim())
+      buf = ''
+    } else {
+      buf += c
+    }
+  }
+  if (buf.trim()) out.push(buf.trim())
+  return out
+}
+
+function stripGeneratedColumns(stmt: string, table: string): string {
+  const cols = GENERATED_COLUMNS_BY_TABLE[table]
+  if (!cols) return stmt
+
+  // Match: INSERT INTO <table> (cols...) VALUES (vals...) [trailer]
+  // The values section may contain newlines and `;` only outside, so we capture greedily up to the last
+  // `)` followed by ON CONFLICT or `;`.
+  const re = /^(INSERT INTO \S+\s*\()([^)]+)\)\s+VALUES\s*\(([\s\S]+)\)\s*((?:ON CONFLICT|;)[\s\S]*)$/
+  const m = stmt.match(re)
+  if (!m) return stmt
+  const [, prefix, colsStr, valsStr, trailer] = m
+  const colList = colsStr.split(',').map((c) => c.trim())
+  const valList = parseValuesList(valsStr)
+  if (colList.length !== valList.length) return stmt // arity mismatch — bail safely
+
+  for (const col of cols) {
+    const idx = colList.indexOf(col)
+    if (idx >= 0) {
+      colList.splice(idx, 1)
+      valList.splice(idx, 1)
+    }
+  }
+  return `${prefix}${colList.join(', ')}) VALUES (${valList.join(', ')}) ${trailer.startsWith(';') ? '' : ''}${trailer}`
+}
+
 interface DevProfile {
   id: string
   full_name: string
@@ -165,6 +223,9 @@ function transformStatement(
 
   // Add ON CONFLICT DO NOTHING for idempotency
   processed = processed.replace(/;\s*$/, '\nON CONFLICT DO NOTHING;')
+
+  // Strip generated columns (e.g. ia_lab_use_case_metrics.man_days_saved)
+  processed = stripGeneratedColumns(processed, newTable)
 
   return { keep: true, stmt: processed }
 }
