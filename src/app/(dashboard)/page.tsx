@@ -1,12 +1,12 @@
-"use client"
+'use client'
 
-import { useCallback, useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { useCallback, useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import {
   KanbanSquare,
   CalendarRange,
@@ -20,9 +20,20 @@ import {
   MailOpen,
   Archive,
   Trash2,
-} from "lucide-react"
-import { toast } from "sonner"
-import type { Sprint, UseCase, InterestRequest } from "@/types/database"
+  Inbox,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  CreateUseCaseDialog,
+  type ApprovalSource,
+} from '@/components/backlog/create-use-case-dialog'
+import { searchProfiles } from '@/lib/stafftool/profiles'
+import type {
+  Sprint,
+  UseCase,
+  InterestRequest,
+  UseCaseSubmission,
+} from '@/types/database'
 
 const interestIcons: Record<string, React.ElementType> = {
   interested: Heart,
@@ -31,65 +42,86 @@ const interestIcons: Record<string, React.ElementType> = {
 }
 
 const interestLabels: Record<string, string> = {
-  interested: "Intéressé",
-  want_to_use: "Souhaite utiliser",
-  propose_to_client: "Proposer à un client",
+  interested: 'Intéressé',
+  want_to_use: 'Souhaite utiliser',
+  propose_to_client: 'Proposer à un client',
 }
+
+type FeedItem =
+  | { kind: 'interest';   item: InterestRequest;   created_at: string }
+  | { kind: 'submission'; item: UseCaseSubmission; created_at: string }
 
 export default function DashboardPage() {
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null)
-  const [stats, setStats] = useState({
-    total: 0,
-    inProgress: 0,
-    done: 0,
-    published: 0,
-  })
-  const [recentInterests, setRecentInterests] = useState<InterestRequest[]>([])
+  const [stats, setStats] = useState({ total: 0, inProgress: 0, done: 0, published: 0 })
+  const [feed, setFeed] = useState<FeedItem[]>([])
   const [sprintUseCases, setSprintUseCases] = useState<UseCase[]>([])
   const [loading, setLoading] = useState(true)
+  const [approvalSource, setApprovalSource] = useState<ApprovalSource | null>(null)
 
   const fetchData = useCallback(async () => {
     const supabase = createClient()
-    const [sprintRes, ucRes, interestsRes] = await Promise.all([
+    const [sprintRes, ucRes, interestsRes, submissionsRes] = await Promise.all([
       supabase
-        .from("ia_lab_sprints")
-        .select("*")
-        .eq("status", "active")
-        .order("start_date", { ascending: false })
+        .from('ia_lab_sprints')
+        .select('*')
+        .eq('status', 'active')
+        .order('start_date', { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase.from("ia_lab_use_cases").select("id, status, is_published"),
+      supabase.from('ia_lab_use_cases').select('id, status, is_published'),
       supabase
-        .from("ia_lab_interest_requests")
-        .select("*, requester:profiles!ia_lab_interest_requests_requester_id_fkey(*), use_case:ia_lab_use_cases(title)")
-        .eq("is_archived", false)
-        .order("created_at", { ascending: false })
+        .from('ia_lab_interest_requests')
+        .select(
+          '*, requester:profiles!ia_lab_interest_requests_requester_id_fkey(*), use_case:ia_lab_use_cases(title)'
+        )
+        .eq('is_archived', false)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('ia_lab_use_case_submissions')
+        .select(
+          '*, submitter:profiles!ia_lab_use_case_submissions_submitted_by_fkey(*)'
+        )
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
         .limit(10),
     ])
 
     if (sprintRes.data) {
       setActiveSprint(sprintRes.data)
-      // Fetch use cases for active sprint
       const { data: sprintUc } = await supabase
-        .from("ia_lab_use_cases")
-        .select("*, owner:profiles!ia_lab_use_cases_owner_id_fkey(*)")
-        .eq("sprint_id", sprintRes.data.id)
-        .order("created_at")
+        .from('ia_lab_use_cases')
+        .select('*, owner:profiles!ia_lab_use_cases_owner_id_fkey(*)')
+        .eq('sprint_id', sprintRes.data.id)
+        .order('created_at')
       if (sprintUc) setSprintUseCases(sprintUc as UseCase[])
     }
 
     if (ucRes.data) {
       setStats({
         total: ucRes.data.length,
-        inProgress: ucRes.data.filter((uc) => uc.status === "in_progress").length,
-        done: ucRes.data.filter((uc) => uc.status === "done").length,
+        inProgress: ucRes.data.filter((uc) => uc.status === 'in_progress').length,
+        done: ucRes.data.filter((uc) => uc.status === 'done').length,
         published: ucRes.data.filter((uc) => uc.is_published).length,
       })
     }
 
-    if (interestsRes.data) {
-      setRecentInterests(interestsRes.data as InterestRequest[])
-    }
+    const interestItems: FeedItem[] = (interestsRes.data ?? []).map((i) => ({
+      kind: 'interest' as const,
+      item: i as InterestRequest,
+      created_at: i.created_at,
+    }))
+    const submissionItems: FeedItem[] = (submissionsRes.data ?? []).map((s) => ({
+      kind: 'submission' as const,
+      item: s as UseCaseSubmission,
+      created_at: s.created_at,
+    }))
+    setFeed(
+      [...interestItems, ...submissionItems]
+        .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
+        .slice(0, 10)
+    )
 
     setLoading(false)
   }, [])
@@ -97,6 +129,72 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  const handleToggleRead = async (id: string, currentRead: boolean) => {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('ia_lab_interest_requests')
+      .update({ is_read: !currentRead })
+      .eq('id', id)
+    if (error) toast.error('Erreur')
+    else {
+      setFeed((prev) =>
+        prev.map((f) =>
+          f.kind === 'interest' && f.item.id === id
+            ? { ...f, item: { ...f.item, is_read: !currentRead } }
+            : f
+        )
+      )
+    }
+  }
+
+  const handleArchive = async (id: string) => {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('ia_lab_interest_requests')
+      .update({ is_archived: true })
+      .eq('id', id)
+    if (error) toast.error('Erreur')
+    else {
+      setFeed((prev) =>
+        prev.filter((f) => !(f.kind === 'interest' && f.item.id === id))
+      )
+      toast.success('Notification archivée')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('ia_lab_interest_requests')
+      .delete()
+      .eq('id', id)
+    if (error) toast.error('Erreur lors de la suppression')
+    else {
+      setFeed((prev) =>
+        prev.filter((f) => !(f.kind === 'interest' && f.item.id === id))
+      )
+      toast.success('Notification supprimée')
+    }
+  }
+
+  const handleOpenSubmission = async (s: UseCaseSubmission) => {
+    // The submission feed query already joins the submitter profile.
+    // Fall back to a profile search if the join was empty for some reason.
+    let submitter: { id: string; full_name: string } | undefined = s.submitter
+      ? { id: s.submitter.id, full_name: s.submitter.full_name }
+      : undefined
+    if (!submitter) {
+      const profiles = await searchProfiles('')
+      const found = profiles.find((p) => p.id === s.submitted_by)
+      if (found) submitter = { id: found.id, full_name: found.full_name }
+    }
+    if (!submitter) {
+      toast.error('Profil du demandeur introuvable')
+      return
+    }
+    setApprovalSource({ submission: s, submitter })
+  }
 
   if (loading) {
     return (
@@ -106,51 +204,11 @@ export default function DashboardPage() {
     )
   }
 
-  const handleToggleRead = async (id: string, currentRead: boolean) => {
-    const supabase = createClient()
-    const { error } = await supabase
-      .from("ia_lab_interest_requests")
-      .update({ is_read: !currentRead })
-      .eq("id", id)
-    if (error) toast.error("Erreur")
-    else {
-      setRecentInterests((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, is_read: !currentRead } : r))
-      )
-    }
-  }
-
-  const handleArchive = async (id: string) => {
-    const supabase = createClient()
-    const { error } = await supabase
-      .from("ia_lab_interest_requests")
-      .update({ is_archived: true })
-      .eq("id", id)
-    if (error) toast.error("Erreur")
-    else {
-      setRecentInterests((prev) => prev.filter((r) => r.id !== id))
-      toast.success("Notification archivée")
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    const supabase = createClient()
-    const { error } = await supabase
-      .from("ia_lab_interest_requests")
-      .delete()
-      .eq("id", id)
-    if (error) toast.error("Erreur lors de la suppression")
-    else {
-      setRecentInterests((prev) => prev.filter((r) => r.id !== id))
-      toast.success("Notification supprimée")
-    }
-  }
-
   const statusLabels: Record<string, string> = {
-    backlog: "Backlog",
-    todo: "À faire",
-    in_progress: "En cours",
-    done: "Terminé",
+    backlog: 'Backlog',
+    todo: 'À faire',
+    in_progress: 'En cours',
+    done: 'Terminé',
   }
 
   return (
@@ -219,7 +277,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">
-              {activeSprint ? `Sprint actif : ${activeSprint.name}` : "Aucun sprint actif"}
+              {activeSprint ? `Sprint actif : ${activeSprint.name}` : 'Aucun sprint actif'}
             </CardTitle>
             {activeSprint && (
               <Link
@@ -254,104 +312,145 @@ export default function DashboardPage() {
             ) : (
               <p className="text-sm text-muted-foreground text-center py-6">
                 {activeSprint
-                  ? "Aucun use case dans ce sprint"
-                  : "Créez un sprint et passez-le en actif"}
+                  ? 'Aucun use case dans ce sprint'
+                  : 'Créez un sprint et passez-le en actif'}
               </p>
             )}
           </CardContent>
         </Card>
 
-        {/* Recent interest requests */}
+        {/* Mixed feed: interest requests + UC submissions */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Dernières demandes d&apos;intérêt</CardTitle>
-            <Link
-              href="/gallery"
-              className="text-xs text-primary hover:underline flex items-center gap-1"
-            >
-              Galerie <ArrowRight className="h-3 w-3" />
-            </Link>
+            <CardTitle className="text-base">Dernières demandes</CardTitle>
           </CardHeader>
           <CardContent>
-            {recentInterests.length > 0 ? (
+            {feed.length > 0 ? (
               <div className="space-y-1">
-                {recentInterests.map((req) => {
-                  const Icon = interestIcons[req.type] || Heart
-                  return (
-                    <div
-                      key={req.id}
-                      className={`group flex items-start gap-3 rounded-lg p-2.5 transition-colors ${
-                        req.is_read ? "opacity-60" : "bg-accent/40"
-                      }`}
-                    >
-                      <div className="relative mt-0.5">
-                        {!req.is_read && (
-                          <span className="absolute -left-1 -top-1 h-2 w-2 rounded-full bg-primary" />
-                        )}
-                        <Avatar className="h-7 w-7">
-                          <AvatarFallback className="text-[10px]">
-                            {req.requester?.full_name
-                              ?.split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()
-                              .slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
+                {feed.map((f) => {
+                  if (f.kind === 'interest') {
+                    const req = f.item
+                    const Icon = interestIcons[req.type] || Heart
+                    return (
+                      <div
+                        key={`i-${req.id}`}
+                        className={`group flex items-start gap-3 rounded-lg p-2.5 transition-colors ${
+                          req.is_read ? 'opacity-60' : 'bg-accent/40'
+                        }`}
+                      >
+                        <div className="relative mt-0.5">
+                          {!req.is_read && (
+                            <span className="absolute -left-1 -top-1 h-2 w-2 rounded-full bg-primary" />
+                          )}
+                          <Avatar className="h-7 w-7">
+                            <AvatarFallback className="text-[10px]">
+                              {req.requester?.full_name
+                                ?.split(' ')
+                                .map((n) => n[0])
+                                .join('')
+                                .toUpperCase()
+                                .slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm">
+                            <span className="font-medium">{req.requester?.full_name}</span>
+                            <span className="text-muted-foreground">
+                              {' '}— {interestLabels[req.type]}
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {(req.use_case as unknown as { title: string })?.title}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleToggleRead(req.id, req.is_read)}
+                            title={req.is_read ? 'Marquer comme non lu' : 'Marquer comme lu'}
+                          >
+                            {req.is_read ? <Mail className="h-3.5 w-3.5" /> : <MailOpen className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleArchive(req.id)}
+                            title="Archiver"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDelete(req.id)}
+                            title="Supprimer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm">
-                          <span className="font-medium">{req.requester?.full_name}</span>
-                          <span className="text-muted-foreground">
-                            {" "}— {interestLabels[req.type]}
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {(req.use_case as unknown as { title: string })?.title}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleToggleRead(req.id, req.is_read)}
-                          title={req.is_read ? "Marquer comme non lu" : "Marquer comme lu"}
-                        >
-                          {req.is_read ? <Mail className="h-3.5 w-3.5" /> : <MailOpen className="h-3.5 w-3.5" />}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleArchive(req.id)}
-                          title="Archiver"
-                        >
-                          <Archive className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDelete(req.id)}
-                          title="Supprimer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
-                    </div>
-                  )
+                    )
+                  } else {
+                    const sub = f.item
+                    return (
+                      <button
+                        key={`s-${sub.id}`}
+                        type="button"
+                        onClick={() => handleOpenSubmission(sub)}
+                        className="w-full text-left flex items-start gap-3 rounded-lg p-2.5 transition-colors bg-accent/40 hover:bg-accent"
+                      >
+                        <div className="mt-0.5">
+                          <Avatar className="h-7 w-7">
+                            <AvatarFallback className="text-[10px]">
+                              {sub.submitter?.full_name
+                                ?.split(' ')
+                                .map((n) => n[0])
+                                .join('')
+                                .toUpperCase()
+                                .slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm">
+                            <span className="font-medium">{sub.submitter?.full_name}</span>
+                            <span className="text-muted-foreground"> a soumis</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {sub.title}
+                          </p>
+                        </div>
+                        <Inbox className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
+                      </button>
+                    )
+                  }
                 })}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-6">
-                Aucune demande d&apos;intérêt récente
+                Aucune demande récente
               </p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Approval popin (controlled by approvalSource state) */}
+      <CreateUseCaseDialog
+        onCreated={() => {
+          setApprovalSource(null)
+          fetchData()
+        }}
+        approvalSource={approvalSource}
+        open={!!approvalSource}
+        onOpenChange={(o) => { if (!o) setApprovalSource(null) }}
+      />
     </div>
   )
 }
