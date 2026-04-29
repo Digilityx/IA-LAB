@@ -195,3 +195,23 @@ export interface InterestRequest {
   requester?: Profile
   use_case?: UseCase
 }
+
+export type SubmissionStatus = 'pending' | 'approved' | 'rejected'
+
+export interface UseCaseSubmission {
+  id: string
+  submitted_by: string
+  title: string
+  description: string | null
+  usage_type: string | null
+  status: SubmissionStatus
+  rejection_reason: string | null
+  approved_use_case_id: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
+  created_at: string
+  updated_at: string
+  // Joined
+  submitter?: Profile
+  reviewer?: Profile
+}
