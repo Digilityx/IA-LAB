@@ -1,38 +1,30 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import {
-  LayoutDashboard,
-  KanbanSquare,
-  CalendarRange,
-  BarChart3,
-  Store,
-  Settings,
-  LogOut,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { LogOut } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { dashboardRoutes } from '@/lib/ia-lab-routes'
+import type { IaLabRole } from '@/lib/ia-lab-roles'
 
-const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Backlog", href: "/backlog", icon: KanbanSquare },
-  { name: "Sprints", href: "/sprints", icon: CalendarRange },
-  { name: "Métriques", href: "/metrics", icon: BarChart3 },
-  { name: "Galerie", href: "/gallery", icon: Store },
-  { name: "Paramètres", href: "/settings", icon: Settings },
-]
+interface SidebarProps {
+  role: IaLabRole | null
+}
 
-export function Sidebar() {
+export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push("/login")
+    router.push('/login')
   }
+
+  const visibleRoutes = dashboardRoutes.filter(
+    (r) => !r.adminOnly || role === 'admin'
+  )
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r bg-card">
@@ -44,20 +36,19 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {navigation.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href)
+        {visibleRoutes.map((item) => {
+          const isActive = item.exact
+            ? pathname === item.href
+            : pathname.startsWith(item.href)
           return (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               )}
             >
               <item.icon className="h-4 w-4" />
