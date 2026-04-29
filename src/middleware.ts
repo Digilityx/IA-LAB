@@ -1,11 +1,8 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  const response = await updateSession(request)
-  // Layouts can't read pathname directly in Next 16 — surface it via header.
-  response.headers.set('x-pathname', request.nextUrl.pathname)
-  return response
+  return await updateSession(request)
 }
 
 export const config = {
