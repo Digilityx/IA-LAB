@@ -1,11 +1,13 @@
 # Plan d'implémentation — Vue Liste, Pop-in Détail, Admin CRUD
 
+> **Statut au 2026-04-30 :** plan partiellement entamé. shadcn `table` + `alert-dialog` installés ; `src/components/backlog/list-view.tsx` existe ; le toggle Kanban/Liste est câblé sur `/backlog`. **Le pop-in détail reste un Dialog** (`use-case-detail-dialog.tsx`) — la conversion en Sheet n'est pas faite. **La refonte des Paramètres n'est pas démarrée.** Lire l'état des fichiers avant de suivre le plan aveuglément.
+
 ## Vue d'ensemble
 
 3 fonctionnalités à développer :
-1. **Vue Liste** — Toggle Kanban ↔ Liste sur la page backlog
-2. **Pop-in Détail** — Sheet latérale au clic sur un use case, avec édition/suppression
-3. **Admin CRUD** — Gestion des tags, utilisateurs et configuration depuis les Paramètres
+1. **Vue Liste** — Toggle Kanban ↔ Liste sur la page backlog *(partiellement fait)*
+2. **Pop-in Détail** — Sheet latérale au clic sur un use case, avec édition/suppression *(à faire — actuellement Dialog)*
+3. **Admin CRUD** — Gestion des tags, utilisateurs et configuration depuis les Paramètres *(à faire)*
 
 ---
 

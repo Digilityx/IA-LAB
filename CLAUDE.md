@@ -48,19 +48,20 @@ npm run import:airtable  # tsx scripts/import-airtable.ts — ALWAYS use --dry-r
 src/
   app/
     (auth)/login/                       # login page (route group, no layout chrome)
-    (dashboard)/                        # dashboard shell + all authenticated pages
-      backlog/                          # Kanban + list view + detail (pop-in)
+    (dashboard)/                        # dashboard shell — async server component, role-gated
+      backlog/                          # Kanban + list view + detail (pop-in) + admin/non-admin button swap
       backlog/[id]/                     # direct-link detail page
       gallery/ + gallery/[id]/          # published UCs + interest dialog
       sprints/ + sprints/[id]/          # sprint planning + burndown
-      metrics/                          # aggregated dashboards
-      settings/                         # profile + admin CRUD (refonte planned)
+      metrics/                          # aggregated dashboards (admin-only)
+      settings/                         # profile + admin CRUD (refonte planned, admin-only)
     auth/callback/route.ts              # Supabase OAuth/magic-link callback
     auth/reset-password/                # password reset flow
   components/
     backlog/     gallery/     sprints/  layout/     ui/   # shadcn components
   hooks/         lib/supabase/     types/database.ts      middleware.ts
-supabase/migrations/                    # 000_ia_lab_initial.sql — the only migration; never edit it, add 011_ia_lab_* for further changes
+supabase/migrations/                    # 000_ia_lab_initial.sql + 011_ia_lab_documents_bucket.sql + 012_ia_lab_use_case_submissions.sql.
+                                        # Never edit a committed migration after it has been applied — add a new 013_ia_lab_*.sql, etc.
 scripts/                                # Airtable import, ad-hoc fixes
 ```
 
@@ -76,9 +77,12 @@ Path alias: `@/*` → `./src/*`.
 Don't import the server client in a client component or vice-versa.
 
 ### Auth & authorization
-- Session gate: `src/middleware.ts` — every non-static route passes through `updateSession`.
+- Session gate: `src/middleware.ts` — every non-static route passes through `updateSession` (which lives in `src/lib/supabase/middleware.ts`).
+- `updateSession` injects `x-pathname` into the **request** headers via `NextResponse.next({ request: { headers: ... } })` so server components can read it via `headers()`. Setting it on the response is a silent footgun — don't do it.
 - RLS is the source of truth. UI checks are for UX only — always assume the DB will reject the action too.
-- Gate project-hub UI with `hasIaLabRole(['admin','member'])` from `src/lib/ia-lab-roles.ts`. Server code reads `ia_lab_user_roles` directly.
+- **Page-level role gating** is in `src/app/(dashboard)/layout.tsx` (server component): reads role via `getCurrentIaLabRoleServer` (`src/lib/ia-lab-roles-server.ts`), reads pathname via `headers()`, and redirects non-admins to `/backlog` when on an admin-only path. Admin-only paths defined in `src/lib/ia-lab-routes.ts` (`dashboardRoutes` array + `isAdminOnlyPath()` helper) — single source of truth, also consumed by `Sidebar` to filter visible nav items.
+- Client-side: gate UI with `hasIaLabRole(['admin','member'])` from `src/lib/ia-lab-roles.ts`, or use the `useIaLabRole()` hook (`src/hooks/use-ia-lab-role.ts`) for components that conditionally render admin-only controls.
+- Server-side Supabase reads use `getCurrentIaLabRoleServer()` from `src/lib/ia-lab-roles-server.ts`.
 
 ### Types
 - Single source: `src/types/database.ts`. Joined fields (`owner?`, `sprint?`, `members?`, `tags?`, `metrics?`) are optional — guard them.
@@ -109,14 +113,27 @@ Statuses, categories, priorities, roles are enforced as PG enums. Adding a value
 
 ---
 
+## Recently shipped (2026-04-30, deployed)
+
+- **Documents bucket fix** (migration `011_ia_lab_documents_bucket.sql`): private `documents` Storage bucket + RLS on `storage.objects`; UC detail dialog stores storage paths and downloads via signed URLs; uploads now surface errors instead of silently swallowing them.
+- **UC submission flow + role-based page gating** (migration `012_ia_lab_use_case_submissions.sql`):
+  - Non-admins see only `/backlog`, `/sprints`, `/gallery`. The "Nouveau use case" button becomes "Soumettre un use case" with a 3-field popin (Titre / Description / Type d'utilisation). Submissions appear in a "Vos demandes" section above the Kanban with edit/delete on pending rows.
+  - Admins triage from the dashboard widget (renamed "Dernières demandes" — was "Dernières demandes d'intérêt"), which now mixes interest requests + pending submissions sorted by `created_at`.
+  - Clicking a submission row opens `CreateUseCaseDialog` in **approval mode** (prefilled fields, submitter strip, Approuver / Rejeter buttons replacing Créer). Reject opens an `AlertDialog` requiring a reason.
+  - Approve/reject UPDATEs are conditional on `status = 'pending'` to handle two-admin races; on lost race the just-INSERTed UC is rolled back.
+
 ## Current work (see `PLAN.md`)
 
-Three features in progress:
-1. **Liste view** toggle on `/backlog` (shadcn `table`).
+Three older features still pending:
+1. **Liste view** toggle on `/backlog` (shadcn `table`) — `list-view.tsx` exists; polish + filters not done.
 2. **UC detail Sheet** — spec says Sheet; the current `use-case-detail-dialog.tsx` is a Dialog. Ask before deciding whether to rename to `-sheet.tsx` or redo.
 3. **Settings refonte** — 4 tabs (Profil / Tags / Utilisateurs / Configuration).
 
-Implementation order is spelled out at the bottom of `PLAN.md` — follow it unless the user says otherwise.
+Implementation order is spelled out at the bottom of `PLAN.md` — follow it unless the user says otherwise. Read file state before following the plan; some pieces (shadcn `table`/`alert-dialog` installed, `list-view.tsx` exists) are partially done.
+
+## Known bugs to handle next
+
+- **Métriques mission bug**: opening the Métriques tab on a UC detail and clicking "Ajouter une mission" (IMPACT or LAB) errors silently with `toast.error("Erreur lors de l'ajout")`. Source: `src/components/backlog/use-case-gains-panel.tsx:94-106`. The error isn't logged. Capture the exact toast text + DevTools network response, then debug systematically — probably RLS on `ia_lab_uc_missions` or the post-insert join.
 
 ---
 
@@ -133,13 +150,21 @@ Implementation order is spelled out at the bottom of `PLAN.md` — follow it unl
 
 Project-hub shares stafftool's production Supabase DB (`fflrtslsujuweggxylbd`). Project-hub-owned tables use the `ia_lab_*` prefix; everything else is stafftool's.
 
-- **Project-hub-owned (CRUD here):** `ia_lab_use_cases`, `ia_lab_sprints`, `ia_lab_tags`, `ia_lab_use_case_members`, `ia_lab_use_case_tags`, `ia_lab_use_case_metrics`, `ia_lab_use_case_documents`, `ia_lab_sprint_use_cases`, `ia_lab_sprint_use_case_assignments`, `ia_lab_uc_missions`, `ia_lab_uc_deals`, `ia_lab_uc_category_history`, `ia_lab_interest_requests`, `ia_lab_user_roles`.
+- **Project-hub-owned (CRUD here):** `ia_lab_use_cases`, `ia_lab_use_case_submissions`, `ia_lab_sprints`, `ia_lab_tags`, `ia_lab_use_case_members`, `ia_lab_use_case_tags`, `ia_lab_use_case_metrics`, `ia_lab_use_case_documents`, `ia_lab_sprint_use_cases`, `ia_lab_sprint_use_case_assignments`, `ia_lab_uc_missions`, `ia_lab_uc_deals`, `ia_lab_uc_category_history`, `ia_lab_interest_requests`, `ia_lab_user_roles`.
+- **Project-hub-owned Storage:** `documents` bucket (private; member/admin write; signed URLs for read).
 - **Stafftool-owned (READ ONLY):** `profiles`, `missions`, `clients`, `cras`, `user_roles`, `mission_consultants`, `expenses`, `expertises`, etc. Access only through `src/lib/stafftool/*`. CI grep-guard blocks direct `.from('...')` calls outside the wrapper.
-- **Enums:** all project-hub enums use the `ia_lab_` prefix (`ia_lab_role`, `ia_lab_sprint_status`, ...).
+- **Stafftool-owned Storage (do not touch):** `rexfiles`, `clients` buckets.
+- **Enums:** all project-hub enums use the `ia_lab_` prefix (`ia_lab_role`, `ia_lab_sprint_status`, `ia_lab_submission_status`, ...).
 
 ## Roles
 
-Project-hub uses its own `ia_lab_user_roles` table (values: `member`, `admin`; absence = viewer). It is orthogonal to stafftool's own `profiles.role` (user category) and `user_roles` (stafftool permissions). Gate UI with `hasIaLabRole(['admin','member'])` from `src/lib/ia-lab-roles.ts`. Server code reads `ia_lab_user_roles` directly. RLS is the authority.
+Project-hub uses its own `ia_lab_user_roles` table (values: `member`, `admin`; absence = viewer). It is orthogonal to stafftool's own `profiles.role` (user category) and `user_roles` (stafftool permissions).
+
+- **Admins** access every page. Use the full "Nouveau use case" creation popin. Triage submissions + interest requests from the dashboard widget.
+- **Members** see only `/backlog`, `/sprints`, `/gallery`. Cannot create UCs directly — they submit a 3-field proposal (`ia_lab_use_case_submissions`) that an admin must approve.
+- **Viewers** (no row in `ia_lab_user_roles`): read-only on the gallery; can send interest requests.
+
+Gate client UI with `hasIaLabRole(['admin','member'])` (`src/lib/ia-lab-roles.ts`) or `useIaLabRole()` (`src/hooks/use-ia-lab-role.ts`). Server code uses `getCurrentIaLabRoleServer()` (`src/lib/ia-lab-roles-server.ts`). Page-level redirect lives in `(dashboard)/layout.tsx`. RLS is the authority.
 
 ## Environment
 
@@ -150,7 +175,17 @@ Single env — prod. Local dev, PR previews, and production all point at the sam
 ## Key files
 
 - `src/lib/stafftool/` — the ONLY place allowed to read stafftool tables. Wrappers: `profiles.ts`, `missions.ts`. Types: `types.ts`.
-- `src/lib/ia-lab-roles.ts` — `hasIaLabRole`, `isIaLabAdmin`, `getCurrentIaLabRole`.
-- `src/types/database.ts` — shared `Profile` type (reflects stafftool's schema: `team` not `department`, `tjm` JSONB year-keyed).
-- `supabase/migrations/000_ia_lab_initial.sql` — the only migration; all `ia_lab_*` schema lives here.
+- `src/lib/ia-lab-roles.ts` — client-side: `hasIaLabRole`, `isIaLabAdmin`, `getCurrentIaLabRole`.
+- `src/lib/ia-lab-roles-server.ts` — server-side: `getCurrentIaLabRoleServer` (used by `(dashboard)/layout.tsx`).
+- `src/lib/ia-lab-routes.ts` — `dashboardRoutes` (sidebar nav source of truth) + `isAdminOnlyPath()`.
+- `src/hooks/use-ia-lab-role.ts` — client React hook for conditional UI.
+- `src/types/database.ts` — shared `Profile` type (reflects stafftool's schema: `team` not `department`, `tjm` JSONB year-keyed); also `UseCaseSubmission`, `SubmissionStatus`.
+- `supabase/migrations/000_ia_lab_initial.sql` — initial schema (14 `ia_lab_*` tables, RLS, helper functions). Applied to prod.
+- `supabase/migrations/011_ia_lab_documents_bucket.sql` — private `documents` Storage bucket + RLS policies. Applied 2026-04-30.
+- `supabase/migrations/012_ia_lab_use_case_submissions.sql` — submission table + column-guard trigger. Applied 2026-04-30.
 - `scripts/import-airtable.ts` — CSV import. ALWAYS `--dry-run` first.
+
+## Spec / plan archive
+
+- `docs/superpowers/specs/2026-04-24-stafftool-merge-design.md` + `docs/superpowers/plans/2026-04-24-stafftool-merge.md` — stafftool merge.
+- `docs/superpowers/specs/2026-04-30-submission-flow-and-role-gating-design.md` + `docs/superpowers/plans/2026-04-30-submission-flow-and-role-gating.md` — submission flow + role gating.
