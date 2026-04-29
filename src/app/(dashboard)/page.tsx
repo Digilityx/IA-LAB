@@ -27,7 +27,7 @@ import {
   CreateUseCaseDialog,
   type ApprovalSource,
 } from '@/components/backlog/create-use-case-dialog'
-import { searchProfiles } from '@/lib/stafftool/profiles'
+import { getProfile } from '@/lib/stafftool/profiles'
 import type {
   Sprint,
   UseCase,
@@ -180,13 +180,12 @@ export default function DashboardPage() {
 
   const handleOpenSubmission = async (s: UseCaseSubmission) => {
     // The submission feed query already joins the submitter profile.
-    // Fall back to a profile search if the join was empty for some reason.
+    // Fall back to a targeted by-id lookup if the join was empty for some reason.
     let submitter: { id: string; full_name: string } | undefined = s.submitter
       ? { id: s.submitter.id, full_name: s.submitter.full_name }
       : undefined
-    if (!submitter) {
-      const profiles = await searchProfiles('')
-      const found = profiles.find((p) => p.id === s.submitted_by)
+    if (!submitter && s.submitted_by) {
+      const found = await getProfile(s.submitted_by)
       if (found) submitter = { id: found.id, full_name: found.full_name }
     }
     if (!submitter) {

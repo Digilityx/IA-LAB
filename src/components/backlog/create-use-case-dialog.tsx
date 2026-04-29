@@ -184,7 +184,7 @@ export function CreateUseCaseDialog({
 
     if (isApprovalMode && approvalSource) {
       const { data: { user } } = await supabase.auth.getUser()
-      const { error: updErr } = await supabase
+      const { data: updatedRows, error: updErr } = await supabase
         .from('ia_lab_use_case_submissions')
         .update({
           status: 'approved',
@@ -193,9 +193,16 @@ export function CreateUseCaseDialog({
           reviewed_at: new Date().toISOString(),
         })
         .eq('id', approvalSource.submission.id)
+        .eq('status', 'pending')
+        .select('id')
       if (updErr) {
         toast.error("UC créé, mais erreur lors de la mise à jour de la demande")
         console.error(updErr)
+      } else if (!updatedRows || updatedRows.length === 0) {
+        // Lost the race — the submission was already approved or rejected by another admin.
+        // Roll back the UC we just created to avoid an orphan row.
+        await supabase.from('ia_lab_use_cases').delete().eq('id', insertedUc.id)
+        toast.error('Demande déjà traitée par un autre administrateur')
       } else {
         toast.success('Demande approuvée — use case créé')
       }
@@ -216,7 +223,7 @@ export function CreateUseCaseDialog({
 
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase
+    const { data: updatedRows, error } = await supabase
       .from('ia_lab_use_case_submissions')
       .update({
         status: 'rejected',
@@ -225,11 +232,24 @@ export function CreateUseCaseDialog({
         reviewed_at: new Date().toISOString(),
       })
       .eq('id', approvalSource.submission.id)
+      .eq('status', 'pending')
+      .select('id')
 
     if (error) {
       toast.error('Erreur lors du rejet')
       console.error(error)
       setRejecting(false)
+      return
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      toast.error('Demande déjà traitée par un autre administrateur')
+      setRejecting(false)
+      setRejectOpen(false)
+      setRejectReason('')
+      setOpen(false)
+      reset()
+      onCreated()
       return
     }
 
