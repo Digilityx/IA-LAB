@@ -369,6 +369,19 @@ export function UseCaseDetailDialog({
     setDeletedDocIds((prev) => [...prev, docId])
   }
 
+  const handleDownload = async (doc: UseCaseDocument) => {
+    if (!doc.file_url) return
+    const supabase = createClient()
+    const { data, error } = await supabase.storage
+      .from("documents")
+      .createSignedUrl(doc.file_url, 3600)
+    if (error || !data) {
+      toast.error(`Impossible d'ouvrir ${doc.file_name}`)
+      return
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer")
+  }
+
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return ""
     if (bytes < 1024) return `${bytes} B`
@@ -506,43 +519,52 @@ export function UseCaseDetailDialog({
       }
     }
 
-    // 5. Upload new files
+    // 5. Upload new files (file_url stores the storage path; bucket is private — signed URLs on download)
+    const failedUploads: string[] = []
     for (const file of newFiles) {
       const filePath = `${useCaseId}/${Date.now()}-${file.name}`
       const { error: uploadError } = await supabase.storage
         .from("documents")
         .upload(filePath, file)
 
-      if (!uploadError) {
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("documents").getPublicUrl(filePath)
+      if (uploadError) {
+        failedUploads.push(file.name)
+        continue
+      }
 
-        await supabase.from("ia_lab_use_case_documents").insert({
+      const { error: insertError } = await supabase
+        .from("ia_lab_use_case_documents")
+        .insert({
           use_case_id: useCaseId,
           file_name: file.name,
-          file_url: publicUrl,
+          file_url: filePath,
           file_size: file.size,
         })
+
+      if (insertError) {
+        failedUploads.push(file.name)
+        await supabase.storage.from("documents").remove([filePath])
       }
     }
 
-    // 6. Delete marked documents
+    // 6. Delete marked documents (file_url is the storage path)
     for (const docId of deletedDocIds) {
       const doc = documents.find((d) => d.id === docId)
       if (doc) {
-        // Extract storage path from URL
-        const urlParts = doc.file_url.split("/documents/")
-        if (urlParts[1]) {
-          await supabase.storage
-            .from("documents")
-            .remove([decodeURIComponent(urlParts[1])])
+        if (doc.file_url) {
+          await supabase.storage.from("documents").remove([doc.file_url])
         }
         await supabase.from("ia_lab_use_case_documents").delete().eq("id", docId)
       }
     }
 
-    toast.success("Use case enregistré")
+    if (failedUploads.length > 0) {
+      toast.error(
+        `Échec du téléchargement : ${failedUploads.join(", ")}`
+      )
+    } else {
+      toast.success("Use case enregistré")
+    }
     setSaving(false)
     onOpenChange(false)
     onUpdate()
@@ -963,14 +985,14 @@ export function UseCaseDetailDialog({
                                 </span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <a
-                                  href={doc.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownload(doc)}
                                   className="p-1 hover:bg-muted rounded"
+                                  title="Télécharger"
                                 >
                                   <Download className="h-3.5 w-3.5" />
-                                </a>
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => markDocForDeletion(doc.id)}
