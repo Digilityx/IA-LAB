@@ -6,6 +6,9 @@ import { KanbanBoard } from "@/components/backlog/kanban-board"
 import { ListView } from "@/components/backlog/list-view"
 import { UseCaseDetailDialog } from "@/components/backlog/use-case-detail-dialog"
 import { CreateUseCaseDialog } from "@/components/backlog/create-use-case-dialog"
+import { SubmitUseCaseDialog } from "@/components/backlog/submit-use-case-dialog"
+import { YourSubmissions } from "@/components/backlog/your-submissions"
+import { useIaLabRole } from "@/hooks/use-ia-lab-role"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,6 +34,8 @@ export default function BacklogPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("kanban")
   const [selectedUseCaseId, setSelectedUseCaseId] = useState<string | null>(null)
   const [displayPrefs] = useDisplayPrefs()
+  const { role, loading: roleLoading } = useIaLabRole()
+  const isAdmin = role === 'admin'
 
   const fetchData = useCallback(async () => {
     const supabase = createClient()
@@ -91,7 +96,7 @@ export default function BacklogPage() {
     setSelectedUseCaseId(id)
   }
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">Chargement...</p>
@@ -108,8 +113,14 @@ export default function BacklogPage() {
             Gérez vos use cases par sprint
           </p>
         </div>
-        <CreateUseCaseDialog onCreated={fetchData} />
+        {isAdmin ? (
+          <CreateUseCaseDialog onCreated={fetchData} />
+        ) : (
+          <SubmitUseCaseDialog onSubmitted={fetchData} />
+        )}
       </div>
+
+      {!isAdmin && <YourSubmissions />}
 
       <div className="flex items-center gap-3">
         {/* View toggle */}
